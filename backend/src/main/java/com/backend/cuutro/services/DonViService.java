@@ -11,7 +11,7 @@ public interface DonViService {
 
 	DonViDto update(Long id, DonViUpsertRequest request);
 
-	void delete(Long id);
+	void delete(Long id); 
 
 	DonViDto getById(Long id);
 

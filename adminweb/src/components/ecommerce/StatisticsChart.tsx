@@ -3,7 +3,7 @@ import Chart from "react-apexcharts";
 import { ApexOptions } from "apexcharts";
 import flatpickr from "flatpickr";
 import ChartTab from "../common/ChartTab";
-import { CalenderIcon } from "../../icons";
+import { CalenderIcon } from "@/icons";
 
 export default function StatisticsChart() {
   const datePickerRef = useRef<HTMLInputElement>(null);
@@ -176,3 +176,4 @@ export default function StatisticsChart() {
     </div>
   );
 }
+

@@ -9,6 +9,7 @@ import com.nimbusds.jose.JWSAlgorithm;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
+import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
@@ -31,6 +32,7 @@ public class SecurityConfig implements WebMvcConfigurer {
 	public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
 		http
 				.authorizeHttpRequests(auth -> auth
+						.requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
 						.requestMatchers(
 								"/auth/login",
 								"/v3/api-docs/**",
@@ -61,6 +63,7 @@ public class SecurityConfig implements WebMvcConfigurer {
 						.requestMatchers(HttpMethod.POST, "/tinh-nguyen-vien/gan-doi-nhom")
 						.hasAnyAuthority(RoleType.ADMIN.name(), RoleType.TRUONG_NHOM_TNV.name())
 						.anyRequest().authenticated())
+				.cors(Customizer.withDefaults())
 				.csrf(AbstractHttpConfigurer::disable)
 				.oauth2ResourceServer(oauth2 -> oauth2
 						.jwt(jwt -> jwt

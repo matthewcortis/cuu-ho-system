@@ -5,6 +5,8 @@ import java.time.Instant;
 
 import org.hibernate.annotations.ColumnDefault;
 import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.NotFound;
+import org.hibernate.annotations.NotFoundAction;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -45,14 +47,17 @@ public class VatPhamEntity implements Serializable {
 
 	@ManyToOne(fetch = FetchType.LAZY)
 	@JoinColumn(name = "don_vi_id")
+	@NotFound(action = NotFoundAction.IGNORE)
 	private DonViEntity donVi;
 
 	@ManyToOne(fetch = FetchType.LAZY)
 	@JoinColumn(name = "nhom_vat_pham_id")
+	@NotFound(action = NotFoundAction.IGNORE)
 	private NhomVatPhamEntity nhomVatPham;
 
 	@ManyToOne(fetch = FetchType.LAZY)
 	@JoinColumn(name = "tep_tin_id")
+	@NotFound(action = NotFoundAction.IGNORE)
 	private TepTinEntity tepTin;
 
 	@Column(name = "trang_thai")

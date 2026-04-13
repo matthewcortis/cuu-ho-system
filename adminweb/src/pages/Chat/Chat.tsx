@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import PageBreadcrumb from "../../components/common/PageBreadCrumb";
-import PageMeta from "../../components/common/PageMeta";
-import { MoreDotIcon, PaperPlaneIcon, VideoIcon } from "../../icons";
+import PageBreadcrumb from "@/components/common/PageBreadCrumb";
+import PageMeta from "@/components/common/PageMeta";
+import { MoreDotIcon, PaperPlaneIcon, VideoIcon } from "@/icons";
 
 type ChatRole = "admin" | "volunteer" | "customer";
 
@@ -573,3 +573,4 @@ export default function ChatPage() {
     </>
   );
 }
+

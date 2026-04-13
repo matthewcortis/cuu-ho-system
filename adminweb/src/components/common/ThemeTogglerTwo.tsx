@@ -1,4 +1,4 @@
-import { useTheme } from "../../context/ThemeContext";
+import { useTheme } from "@/app/providers/ThemeContext";
 
 export default function ThemeTogglerTwo() {
   const { toggleTheme } = useTheme();
@@ -38,3 +38,4 @@ export default function ThemeTogglerTwo() {
     </button>
   );
 }
+

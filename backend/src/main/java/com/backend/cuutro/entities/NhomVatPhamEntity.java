@@ -5,6 +5,8 @@ import java.time.Instant;
 
 import org.hibernate.annotations.ColumnDefault;
 import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.NotFound;
+import org.hibernate.annotations.NotFoundAction;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -45,6 +47,7 @@ public class NhomVatPhamEntity implements Serializable {
 
 	@ManyToOne(fetch = FetchType.LAZY)
 	@JoinColumn(name = "loai_su_co_id")
+	@NotFound(action = NotFoundAction.IGNORE)
 	private LoaiSuCoEntity loaiSuCo;
 
 	@CreationTimestamp

@@ -33,7 +33,7 @@ public class DonViServiceImpl implements DonViService {
 	}
 
 	@Override
-	@Transactional
+	@Transactional 
 	public DonViDto update(Long id, DonViUpsertRequest request) {
 		DonViEntity entity = getEntityOrThrow(id);
 		applyRequest(entity, request);
