@@ -135,12 +135,14 @@ export async function fetchDonViList(): Promise<DonViDto[]> {
     throw new DonViApiError("Backend khong tra ve danh sach don vi hop le", envelope.status);
   }
 
-  const parsedItems = envelope.data.map(parseDonViDto);
-  if (parsedItems.some((item) => item === null)) {
+  const parsedItems = envelope.data
+    .map(parseDonViDto)
+    .filter((item): item is DonViDto => item !== null);
+  if (parsedItems.length === 0 && envelope.data.length > 0) {
     throw new DonViApiError("Du lieu don vi tra ve khong hop le", envelope.status);
   }
 
-  return parsedItems as DonViDto[];
+  return parsedItems;
 }
 
 export async function createDonVi(request: DonViUpsertRequest): Promise<DonViDto> {

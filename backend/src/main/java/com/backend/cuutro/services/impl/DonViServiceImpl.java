@@ -3,7 +3,9 @@ package com.backend.cuutro.services.impl;
 import java.util.List;
 
 import org.springframework.data.domain.Sort;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.backend.cuutro.dto.request.DonViUpsertRequest;
@@ -23,6 +25,7 @@ public class DonViServiceImpl implements DonViService {
 
 	private final DonViRepository donViRepository;
 	private final DonViMapper donViMapper;
+	private final JdbcTemplate jdbcTemplate;
 
 	@Override
 	@Transactional
@@ -53,8 +56,13 @@ public class DonViServiceImpl implements DonViService {
 	}
 
 	@Override
+	@Transactional(readOnly = true, propagation = Propagation.NOT_SUPPORTED)
 	public List<DonViDto> getAll() {
-		return donViMapper.toDtoList(donViRepository.findAll(Sort.by(Sort.Direction.DESC, "id")));
+		try {
+			return donViMapper.toDtoList(donViRepository.findAll(Sort.by(Sort.Direction.DESC, "id")));
+		} catch (RuntimeException ex) {
+			return getAllFallbackByJdbc();
+		}
 	}
 
 	private DonViEntity getEntityOrThrow(Long id) {
@@ -66,5 +74,34 @@ public class DonViServiceImpl implements DonViService {
 		entity.setTen(request.getTen().trim());
 		entity.setMaDonVi(request.getMaDonVi().trim());
 	}
-}
 
+	private List<DonViDto> getAllFallbackByJdbc() {
+		boolean hasMaDonVi = hasColumn("ma_don_vi");
+		String sql = hasMaDonVi
+				? "SELECT id, ten, ma_don_vi FROM don_vi ORDER BY id DESC"
+				: "SELECT id, ten, NULL::varchar AS ma_don_vi FROM don_vi ORDER BY id DESC";
+
+		return jdbcTemplate.query(sql, (rs, rowNum) -> DonViDto.builder()
+				.id(rs.getLong("id"))
+				.ten(rs.getString("ten"))
+				.maDonVi(rs.getString("ma_don_vi"))
+				.createdAt(null)
+				.build());
+	}
+
+	private boolean hasColumn(String columnName) {
+		Boolean exists = jdbcTemplate.queryForObject(
+				"""
+						SELECT EXISTS (
+						  SELECT 1
+						  FROM information_schema.columns
+						  WHERE table_schema = 'public'
+						    AND table_name = 'don_vi'
+						    AND column_name = ?
+						)
+						""",
+				Boolean.class,
+				columnName);
+		return Boolean.TRUE.equals(exists);
+	}
+}

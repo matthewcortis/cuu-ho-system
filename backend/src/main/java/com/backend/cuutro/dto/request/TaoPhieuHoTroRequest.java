@@ -28,8 +28,13 @@ public class TaoPhieuHoTroRequest {
 	@NotNull(message = "viTriId is required")
 	Long viTriId;
 
-	@NotNull(message = "tepTinId is required")
+	/**
+	 * Backward-compatible single attachment id.
+	 * Prefer using tepTins for new clients.
+	 */
 	Long tepTinId;
+
+	List<@Valid TaoPhieuHoTroTepTinRequest> tepTins;
 
 	@NotNull(message = "nguoiGui is required")
 	@Valid

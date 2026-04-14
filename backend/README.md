@@ -55,16 +55,12 @@ CREATE TABLE public.don_vi (
   created_at timestamp with time zone DEFAULT now(),
   CONSTRAINT don_vi_pkey PRIMARY KEY (id)
 );
-CREATE TABLE public.khai_bao (
-  id bigint GENERATED ALWAYS AS IDENTITY NOT NULL,
-  created_at timestamp with time zone NOT NULL DEFAULT now(),
-  CONSTRAINT khai_bao_pkey PRIMARY KEY (id)
-);
 CREATE TABLE public.loai_su_co (
   id bigint GENERATED ALWAYS AS IDENTITY NOT NULL,
   ten character varying,
   icon_url character varying,
   created_at timestamp with time zone DEFAULT now(),
+  mo_ta character varying,
   CONSTRAINT loai_su_co_pkey PRIMARY KEY (id)
 );
 CREATE TABLE public.nguoi_dung (
@@ -91,8 +87,10 @@ CREATE TABLE public.nhom_vat_pham (
   mo_ta character varying,
   created_at timestamp with time zone DEFAULT now(),
   loai_su_co_id bigint,
+  ma_don_vi character varying,
   CONSTRAINT nhom_vat_pham_pkey PRIMARY KEY (id),
-  CONSTRAINT nhom_vat_pham_danh_sach_cuu_tro_id_fkey FOREIGN KEY (loai_su_co_id) REFERENCES public.loai_su_co(id)
+  CONSTRAINT nhom_vat_pham_danh_sach_cuu_tro_id_fkey FOREIGN KEY (loai_su_co_id) REFERENCES public.loai_su_co(id),
+  CONSTRAINT fk2jta81hpxkr8bc1pugdcfp73i FOREIGN KEY (loai_su_co_id) REFERENCES public.nhom_vat_pham(id)
 );
 CREATE TABLE public.phan_cong (
   id bigint GENERATED ALWAYS AS IDENTITY NOT NULL,
@@ -115,7 +113,6 @@ CREATE TABLE public.phieu_cuu_tro (
   id bigint GENERATED ALWAYS AS IDENTITY NOT NULL,
   loai_su_co_id bigint,
   vi_tri_id bigint,
-  tep_tin_id bigint,
   nguoi_dung_id uuid,
   ho_ten character varying,
   sdt character varying,
@@ -125,18 +122,19 @@ CREATE TABLE public.phieu_cuu_tro (
   CONSTRAINT phieu_cuu_tro_pkey PRIMARY KEY (id),
   CONSTRAINT phieu_cuu_tro_danh_sach_cuu_tro_id_fkey FOREIGN KEY (loai_su_co_id) REFERENCES public.loai_su_co(id),
   CONSTRAINT phieu_cuu_tro_vi_tri_id_fkey FOREIGN KEY (vi_tri_id) REFERENCES public.vi_tri(id),
-  CONSTRAINT phieu_cuu_tro_tep_tin_id_fkey FOREIGN KEY (tep_tin_id) REFERENCES public.tep_tin(id),
   CONSTRAINT phieu_cuu_tro_nguoi_dung_id_fkey FOREIGN KEY (nguoi_dung_id) REFERENCES public.nguoi_dung(id)
 );
-CREATE TABLE public.so_luong_vat_pham (
+CREATE TABLE public.phieu_cuu_tro_tep_tin (
   id bigint GENERATED ALWAYS AS IDENTITY NOT NULL,
-  khai_bao_id bigint,
-  created_at timestamp with time zone NOT NULL DEFAULT now(),
-  vat_pham_id bigint,
-  so_luong smallint,
-  CONSTRAINT so_luong_vat_pham_pkey PRIMARY KEY (id),
-  CONSTRAINT so_luong_vat_pham_khai_bao_id_fkey FOREIGN KEY (khai_bao_id) REFERENCES public.khai_bao(id),
-  CONSTRAINT fk9cb0d8xp1mcm1teosgas06118 FOREIGN KEY (vat_pham_id) REFERENCES public.vat_pham(id)
+  phieu_cuu_tro_id bigint NOT NULL,
+  tep_tin_id bigint NOT NULL,
+  loai character varying NOT NULL,
+  thu_tu integer DEFAULT 0,
+  mo_ta character varying,
+  created_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT phieu_cuu_tro_tep_tin_pkey PRIMARY KEY (id),
+  CONSTRAINT fk_pctt_phieu FOREIGN KEY (phieu_cuu_tro_id) REFERENCES public.phieu_cuu_tro(id),
+  CONSTRAINT fk_pctt_tep_tin FOREIGN KEY (tep_tin_id) REFERENCES public.tep_tin(id)
 );
 CREATE TABLE public.tai_khoan (
   id bigint GENERATED ALWAYS AS IDENTITY NOT NULL,
@@ -180,13 +178,6 @@ CREATE TABLE public.tinh_nguyen_vien (
   CONSTRAINT tinh_nguyen_vien_pkey PRIMARY KEY (id),
   CONSTRAINT tinh_nguyen_vien_nguoi_dung_id_fkey FOREIGN KEY (nguoi_dung_id) REFERENCES public.nguoi_dung(id)
 );
-CREATE TABLE public.trangthai_cuutro (
-  id bigint GENERATED ALWAYS AS IDENTITY NOT NULL,
-  code character varying,
-  name character varying,
-  created_at timestamp with time zone NOT NULL DEFAULT now(),
-  CONSTRAINT trangthai_cuutro_pkey PRIMARY KEY (id)
-);
 CREATE TABLE public.vat_pham (
   id bigint GENERATED ALWAYS AS IDENTITY NOT NULL,
   ten_vat_pham character varying,
@@ -196,6 +187,7 @@ CREATE TABLE public.vat_pham (
   tep_tin_id bigint,
   trang_thai boolean,
   created_at timestamp with time zone DEFAULT now(),
+  don_vi_tinh character varying,
   CONSTRAINT vat_pham_pkey PRIMARY KEY (id),
   CONSTRAINT vat_pham_tep_tin_id_fkey FOREIGN KEY (tep_tin_id) REFERENCES public.tep_tin(id),
   CONSTRAINT vat_pham_don_vi_id_fkey FOREIGN KEY (don_vi_id) REFERENCES public.don_vi(id),

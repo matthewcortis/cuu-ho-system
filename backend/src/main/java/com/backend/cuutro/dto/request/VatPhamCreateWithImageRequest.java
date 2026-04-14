@@ -34,7 +34,7 @@ public class VatPhamCreateWithImageRequest {
 	@NotNull(message = "nhomVatPhamId is required")
 	Long nhomVatPhamId;
 
-	Long tenTinId;
+	Long tepTinId;
 
 	Boolean trangThai;
 

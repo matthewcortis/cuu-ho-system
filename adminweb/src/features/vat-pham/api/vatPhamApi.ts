@@ -43,7 +43,7 @@ export interface VatPhamCreateWithImageRequest {
   donViId: number;
   nhomVatPhamId: number;
   anhVatPham: File;
-  tenTinId?: number | null;
+  tepTinId?: number | null;
   trangThai?: boolean;
 }
 
@@ -226,12 +226,14 @@ export async function fetchVatPhamList(): Promise<VatPhamDto[]> {
     throw new VatPhamApiError("Backend khong tra ve danh sach vat pham hop le", envelope.status);
   }
 
-  const parsedItems = envelope.data.map(parseVatPhamDto);
-  if (parsedItems.some((item) => item === null)) {
+  const parsedItems = envelope.data
+    .map(parseVatPhamDto)
+    .filter((item): item is VatPhamDto => item !== null);
+  if (parsedItems.length === 0 && envelope.data.length > 0) {
     throw new VatPhamApiError("Du lieu vat pham tra ve khong hop le", envelope.status);
   }
 
-  return parsedItems as VatPhamDto[];
+  return parsedItems;
 }
 
 export async function createVatPhamWithImage(
@@ -245,8 +247,8 @@ export async function createVatPhamWithImage(
   formData.append("nhomVatPhamId", String(request.nhomVatPhamId));
   formData.append("anhVatPham", request.anhVatPham);
 
-  if (typeof request.tenTinId === "number") {
-    formData.append("tenTinId", String(request.tenTinId));
+  if (typeof request.tepTinId === "number") {
+    formData.append("tepTinId", String(request.tepTinId));
   }
   if (typeof request.trangThai === "boolean") {
     formData.append("trangThai", String(request.trangThai));

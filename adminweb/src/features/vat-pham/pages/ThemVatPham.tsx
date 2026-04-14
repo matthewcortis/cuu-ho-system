@@ -38,6 +38,8 @@ interface SelectOption {
   label: string;
 }
 
+const MAX_SHORT = 32767;
+
 function getInitialErrors(): FormErrors {
   return {
     tenVatPham: "",
@@ -115,7 +117,7 @@ export default function ThemVatPhamPage() {
       setLoadError(null);
 
       try {
-        const [vatPhamList, donViList, nhomVatPhamList] = await Promise.all([
+        const [vatPhamResult, donViResult, nhomVatPhamResult] = await Promise.allSettled([
           fetchVatPhamList(),
           fetchDonViList(),
           fetchNhomVatPhamList(),
@@ -125,19 +127,37 @@ export default function ThemVatPhamPage() {
           return;
         }
 
-        setItems(vatPhamList.map(mapVatPhamDtoToItem));
-        setDonViOptions(
-          donViList.map((item) => ({
-            value: String(item.id),
-            label: item.ten?.trim() || "Khong co ten",
-          }))
-        );
-        setNhomVatPhamOptions(
-          nhomVatPhamList.map((item) => ({
-            value: String(item.id),
-            label: item.ten?.trim() || "Khong co ten",
-          }))
-        );
+        const loadErrors: string[] = [];
+
+        if (vatPhamResult.status === "fulfilled") {
+          setItems(vatPhamResult.value.map(mapVatPhamDtoToItem));
+        } else {
+          loadErrors.push(`Vat pham: ${getApiErrorMessage(vatPhamResult.reason)}`);
+        }
+
+        if (donViResult.status === "fulfilled") {
+          setDonViOptions(
+            donViResult.value.map((item) => ({
+              value: String(item.id),
+              label: item.ten?.trim() || "Khong co ten",
+            }))
+          );
+        } else {
+          loadErrors.push(`Don vi: ${getApiErrorMessage(donViResult.reason)}`);
+        }
+
+        if (nhomVatPhamResult.status === "fulfilled") {
+          setNhomVatPhamOptions(
+            nhomVatPhamResult.value.map((item) => ({
+              value: String(item.id),
+              label: item.ten?.trim() || "Khong co ten",
+            }))
+          );
+        } else {
+          loadErrors.push(`Nhom vat pham: ${getApiErrorMessage(nhomVatPhamResult.reason)}`);
+        }
+
+        setLoadError(loadErrors.length > 0 ? loadErrors.join(" | ") : null);
       } catch (error) {
         if (!isMounted) {
           return;
@@ -283,8 +303,14 @@ export default function ThemVatPhamPage() {
     if (!tenVatPham) {
       nextErrors.tenVatPham = "Vui long nhap ten vat pham.";
     }
-    if (!formValues.soLuong.trim() || Number.isNaN(soLuong) || soLuong <= 0) {
-      nextErrors.soLuong = "So luong phai lon hon 0.";
+    if (
+      !formValues.soLuong.trim() ||
+      Number.isNaN(soLuong) ||
+      !Number.isInteger(soLuong) ||
+      soLuong <= 0 ||
+      soLuong > MAX_SHORT
+    ) {
+      nextErrors.soLuong = `So luong phai trong khoang 1 den ${MAX_SHORT}.`;
     }
     if (
       editingItemId === null &&
@@ -466,6 +492,8 @@ export default function ThemVatPhamPage() {
                   id="so-luong"
                   type="number"
                   min="1"
+                  max={String(MAX_SHORT)}
+                  step={1}
                   placeholder="Vi du: 100"
                   value={formValues.soLuong}
                   onChange={(event) =>

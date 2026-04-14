@@ -27,8 +27,8 @@ import lombok.Setter;
 @Getter
 @Setter
 @Entity
-@Table(name = "so_luong_vat_pham")
-public class SoLuongVatPhamEntity implements Serializable {
+@Table(name = "phieu_cuu_tro_tep_tin")
+public class PhieuCuuTroTepTinEntity implements Serializable {
 
 	private static final long serialVersionUID = 1L;
 
@@ -38,18 +38,25 @@ public class SoLuongVatPhamEntity implements Serializable {
 	private Long id;
 
 	@ManyToOne(fetch = FetchType.LAZY)
-	@JoinColumn(name = "khai_bao_id")
-	private KhaiBaoEntity khaiBao;
+	@JoinColumn(name = "phieu_cuu_tro_id", nullable = false)
+	private PhieuCuuTroEntity phieuCuuTro;
 
 	@ManyToOne(fetch = FetchType.LAZY)
-	@JoinColumn(name = "vat_pham_id")
-	private VatPhamEntity vatPham;
+	@JoinColumn(name = "tep_tin_id", nullable = false)
+	private TepTinEntity tepTin;
 
-	@Column(name = "so_luong")
-	private Short soLuong;
+	@Column(name = "loai", nullable = false)
+	private String loai;
+
+	@ColumnDefault("0")
+	@Column(name = "thu_tu")
+	private Integer thuTu;
+
+	@Column(name = "mo_ta")
+	private String moTa;
 
 	@CreationTimestamp
 	@ColumnDefault("CURRENT_TIMESTAMP")
-	@Column(name = "created_at", nullable = false, updatable = false)
+	@Column(name = "created_at", updatable = false)
 	private Instant createdAt;
 }

@@ -13,7 +13,7 @@ import lombok.Setter;
 import lombok.experimental.FieldDefaults;
 
 /**
- * DTO for {@link com.backend.cuutro.entities.SoLuongVatPhamEntity}
+ * DTO for {@link com.backend.cuutro.entities.PhieuCuuTroTepTinEntity}
  */
 @AllArgsConstructor
 @Getter
@@ -22,11 +22,11 @@ import lombok.experimental.FieldDefaults;
 @FieldDefaults(level = AccessLevel.PRIVATE)
 @Builder
 @EqualsAndHashCode(of = {"id"})
-public class SoLuongVatPhamDto implements Serializable {
+public class PhieuCuuTroTepTinDto implements Serializable {
 	Long id;
-	KhaiBaoDto khaiBao;
-	VatPhamDto vatPham;
-	Short soLuong;
+	TepTinDto tepTin;
+	String loai;
+	Integer thuTu;
+	String moTa;
 	Instant createdAt;
-
 }

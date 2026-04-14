@@ -27,6 +27,7 @@ import com.backend.cuutro.dto.request.NguoiGuiRequest;
 import com.backend.cuutro.dto.request.PhieuCuuTroFilterRequest;
 import com.backend.cuutro.dto.request.TaoChiTietCuuTroRequest;
 import com.backend.cuutro.dto.request.TaoPhieuHoTroRequest;
+import com.backend.cuutro.dto.request.TaoPhieuHoTroTepTinRequest;
 import com.backend.cuutro.dto.response.entities.NguoiGuiDto;
 import com.backend.cuutro.dto.response.entities.PhanCongDto;
 import com.backend.cuutro.dto.response.entities.PhieuCuuTroChiTietDto;
@@ -38,6 +39,7 @@ import com.backend.cuutro.entities.DoiNhomEntity;
 import com.backend.cuutro.entities.NguoiDungEntity;
 import com.backend.cuutro.entities.PhanCongEntity;
 import com.backend.cuutro.entities.PhieuCuuTroEntity;
+import com.backend.cuutro.entities.PhieuCuuTroTepTinEntity;
 import com.backend.cuutro.entities.TinNhanEntity;
 import com.backend.cuutro.exception.customize.InvalidFieldException;
 import com.backend.cuutro.mapper.PhanCongMapper;
@@ -50,6 +52,7 @@ import com.backend.cuutro.repository.LoaiSuCoRepository;
 import com.backend.cuutro.repository.NguoiDungRepository;
 import com.backend.cuutro.repository.PhanCongRepository;
 import com.backend.cuutro.repository.PhieuCuuTroRepository;
+import com.backend.cuutro.repository.PhieuCuuTroTepTinRepository;
 import com.backend.cuutro.repository.TepTinRepository;
 import com.backend.cuutro.repository.TinNhanRepository;
 import com.backend.cuutro.repository.VatPhamRepository;
@@ -71,6 +74,7 @@ public class PhieuCuuTroService {
 	private static final String PHIEU_TRANG_THAI_ASSIGNED_DB = "assigned";
 	private static final String PHIEU_TRANG_THAI_PROCESSING_DB = "processing";
 	private static final String PHIEU_TRANG_THAI_DONE_DB = "done";
+	private static final String LOAI_TEP_TIN_MAC_DINH = "general";
 	private static final List<String> TRANG_THAI_PHIEU_KET_THUC = List.of(
 			TrangThaiPhieuHoTro.HOAN_THANH.name(),
 			TrangThaiPhieuHoTro.HUY.name());
@@ -82,6 +86,7 @@ public class PhieuCuuTroService {
 	private final DoiNhomTinhNguyenVienRepository doiNhomTinhNguyenVienRepository;
 	private final LoaiSuCoRepository loaiSuCoRepository;
 	private final ViTriRepository viTriRepository;
+	private final PhieuCuuTroTepTinRepository phieuCuuTroTepTinRepository;
 	private final TepTinRepository tepTinRepository;
 	private final VatPhamRepository vatPhamRepository;
 	private final NguoiDungRepository nguoiDungRepository;
@@ -98,16 +103,21 @@ public class PhieuCuuTroService {
 				.orElseThrow(() -> new EntityNotFoundException("LoaiSuCo not found with id=" + request.getLoaiSuCoId())));
 		entity.setViTri(viTriRepository.findById(request.getViTriId())
 				.orElseThrow(() -> new EntityNotFoundException("ViTri not found with id=" + request.getViTriId())));
-		entity.setTepTin(tepTinRepository.findById(request.getTepTinId())
-				.orElseThrow(() -> new EntityNotFoundException("TepTin not found with id=" + request.getTepTinId())));
 		entity.setNguoiDung(resolvedNguoiGui.nguoiDung());
 		entity.setHoTen(resolvedNguoiGui.ten());
 		entity.setSdt(resolvedNguoiGui.sdt());
 		entity.setGhiChu(request.getGhiChu().trim());
 		entity.setTrangThai(PHIEU_TRANG_THAI_PENDING_DB);
 		PhieuCuuTroEntity savedPhieu = phieuCuuTroRepository.save(entity);
+
 		List<ChiTietCuuTroEntity> chiTietCuuTro = buildChiTietCuuTro(savedPhieu, request.getChiTietCuuTro());
 		chiTietCuuTroRepository.saveAll(chiTietCuuTro);
+
+		List<TaoPhieuHoTroTepTinRequest> tepTinRequests = resolveTepTinRequests(request);
+		List<PhieuCuuTroTepTinEntity> phieuCuuTroTepTinEntities = buildPhieuCuuTroTepTin(savedPhieu, tepTinRequests);
+		phieuCuuTroTepTinRepository.saveAll(phieuCuuTroTepTinEntities);
+		savedPhieu.setTepTins(phieuCuuTroTepTinEntities);
+
 		PhieuCuuTroDto dto = phieuCuuTroMapper.toDto(savedPhieu);
 		dto.setNguoiGui(buildNguoiGuiDto(savedPhieu));
 		dto.setChiTietCuuTro(toChiTietDtos(chiTietCuuTro));
@@ -287,6 +297,48 @@ public class PhieuCuuTroService {
 		return chiTietEntities;
 	}
 
+	private List<TaoPhieuHoTroTepTinRequest> resolveTepTinRequests(TaoPhieuHoTroRequest request) {
+		List<TaoPhieuHoTroTepTinRequest> tepTinRequests = request.getTepTins();
+		if (tepTinRequests != null && !tepTinRequests.isEmpty()) {
+			return tepTinRequests;
+		}
+		if (request.getTepTinId() == null) {
+			throw new InvalidFieldException("tepTins is required");
+		}
+		return List.of(TaoPhieuHoTroTepTinRequest.builder()
+				.tepTinId(request.getTepTinId())
+				.loai(LOAI_TEP_TIN_MAC_DINH)
+				.thuTu(0)
+				.moTa(null)
+				.build());
+	}
+
+	private List<PhieuCuuTroTepTinEntity> buildPhieuCuuTroTepTin(
+			PhieuCuuTroEntity phieu,
+			List<TaoPhieuHoTroTepTinRequest> tepTinRequests) {
+		Set<Long> tepTinDaThem = new HashSet<>();
+		List<PhieuCuuTroTepTinEntity> tepTinEntities = new ArrayList<>(tepTinRequests.size());
+
+		for (int i = 0; i < tepTinRequests.size(); i++) {
+			TaoPhieuHoTroTepTinRequest tepTinRequest = tepTinRequests.get(i);
+			Long tepTinId = tepTinRequest.getTepTinId();
+			if (!tepTinDaThem.add(tepTinId)) {
+				throw new InvalidFieldException("Khong duoc trung tepTinId trong tepTins");
+			}
+
+			PhieuCuuTroTepTinEntity tepTinEntity = new PhieuCuuTroTepTinEntity();
+			tepTinEntity.setPhieuCuuTro(phieu);
+			tepTinEntity.setTepTin(tepTinRepository.findById(tepTinId)
+					.orElseThrow(() -> new EntityNotFoundException("TepTin not found with id=" + tepTinId)));
+			tepTinEntity.setLoai(tepTinRequest.getLoai().trim());
+			tepTinEntity.setThuTu(tepTinRequest.getThuTu() == null ? i : tepTinRequest.getThuTu());
+			tepTinEntity.setMoTa(StringUtils.hasText(tepTinRequest.getMoTa()) ? tepTinRequest.getMoTa().trim() : null);
+			tepTinEntities.add(tepTinEntity);
+		}
+
+		return tepTinEntities;
+	}
+
 	private List<PhieuCuuTroChiTietDto> toChiTietDtos(List<ChiTietCuuTroEntity> chiTietEntities) {
 		return chiTietEntities.stream()
 				.map(chiTiet -> PhieuCuuTroChiTietDto.builder()
@@ -296,7 +348,7 @@ public class PhieuCuuTroService {
 						.soLuong(chiTiet.getSoLuong())
 						.ghiChu(chiTiet.getGhiChu())
 						.createdAt(chiTiet.getCreatedAt())
-						.build())
+					.build())
 				.toList();
 	}
 

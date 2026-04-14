@@ -27,7 +27,7 @@ public class PhieuCuuTroDto implements Serializable {
 	Long id;
 	LoaiSuCoDto loaiSuCo;
 	ViTriDto viTri;
-	TepTinDto tepTin;
+	List<PhieuCuuTroTepTinDto> tepTins;
 	NguoiGuiDto nguoiGui;
 	String ghiChu;
 	String trangThai;

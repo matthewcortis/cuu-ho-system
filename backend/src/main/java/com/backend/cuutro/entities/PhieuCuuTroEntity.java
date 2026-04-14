@@ -2,10 +2,13 @@ package com.backend.cuutro.entities;
 
 import java.io.Serializable;
 import java.time.Instant;
+import java.util.ArrayList;
+import java.util.List;
 
 import org.hibernate.annotations.ColumnDefault;
 import org.hibernate.annotations.CreationTimestamp;
 
+import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
@@ -14,6 +17,8 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
+import jakarta.persistence.OneToMany;
+import jakarta.persistence.OrderBy;
 import jakarta.persistence.Table;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -45,9 +50,10 @@ public class PhieuCuuTroEntity implements Serializable {
 	@JoinColumn(name = "vi_tri_id")
 	private ViTriEntity viTri;
 
-	@ManyToOne(fetch = FetchType.LAZY)
-	@JoinColumn(name = "tep_tin_id")
-	private TepTinEntity tepTin;
+	@Builder.Default
+	@OneToMany(mappedBy = "phieuCuuTro", fetch = FetchType.LAZY, cascade = CascadeType.ALL, orphanRemoval = true)
+	@OrderBy("thuTu ASC, id ASC")
+	private List<PhieuCuuTroTepTinEntity> tepTins = new ArrayList<>();
 
 	@ManyToOne(fetch = FetchType.LAZY)
 	@JoinColumn(name = "nguoi_dung_id")

@@ -73,7 +73,12 @@ public final class PhieuCuuTroSpecifications {
 	}
 
 	public static Specification<PhieuCuuTroEntity> hasTepTinId(Long tepTinId) {
-		return (root, query, cb) -> cb.equal(root.join("tepTin", JoinType.LEFT).get("id"), tepTinId);
+		return (root, query, cb) -> {
+			if (query != null) {
+				query.distinct(true);
+			}
+			return cb.equal(root.join("tepTins", JoinType.LEFT).join("tepTin", JoinType.LEFT).get("id"), tepTinId);
+		};
 	}
 
 	public static Specification<PhieuCuuTroEntity> hasNguoiDungId(UUID nguoiDungId) {

@@ -181,12 +181,14 @@ export async function fetchNhomVatPhamList(): Promise<NhomVatPhamDto[]> {
     );
   }
 
-  const parsedItems = envelope.data.map(parseNhomVatPhamDto);
-  if (parsedItems.some((item) => item === null)) {
+  const parsedItems = envelope.data
+    .map(parseNhomVatPhamDto)
+    .filter((item): item is NhomVatPhamDto => item !== null);
+  if (parsedItems.length === 0 && envelope.data.length > 0) {
     throw new NhomVatPhamApiError("Du lieu nhom vat pham tra ve khong hop le", envelope.status);
   }
 
-  return parsedItems as NhomVatPhamDto[];
+  return parsedItems;
 }
 
 export async function createNhomVatPham(
