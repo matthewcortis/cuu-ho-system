@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { PencilIcon, TrashBinIcon } from "@/icons";
+import { EyeCloseIcon, EyeIcon, PencilIcon, TrashBinIcon } from "@/icons";
 import { Modal } from "@/components/ui/modal";
 import {
   Table,
@@ -20,12 +20,14 @@ export interface ThemVatPhamItem {
   imageUrl: string;
   imagePath: string;
   tepTinId: number | null;
+  trangThai: boolean;
   createdAt: string;
 }
 
 interface ThemVatPhamTableProps {
   items: ThemVatPhamItem[];
   onEditItem?: (item: ThemVatPhamItem) => void;
+  onToggleVisibilityItem?: (item: ThemVatPhamItem) => void;
   onDeleteItem?: (item: ThemVatPhamItem) => void;
 }
 
@@ -38,6 +40,7 @@ function formatDate(value: string): string {
 export default function ThemVatPhamTable({
   items,
   onEditItem,
+  onToggleVisibilityItem,
   onDeleteItem,
 }: ThemVatPhamTableProps) {
   const [previewImage, setPreviewImage] = useState<{
@@ -81,6 +84,12 @@ export default function ThemVatPhamTable({
                   className="px-4 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
                 >
                   Don vi
+                </TableCell>
+                <TableCell
+                  isHeader
+                  className="px-4 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
+                >
+                  Trang thai
                 </TableCell>
                 <TableCell
                   isHeader
@@ -138,6 +147,17 @@ export default function ThemVatPhamTable({
                   <TableCell className="px-4 py-3 text-gray-500 text-start text-theme-sm dark:text-gray-400">
                     {item.donVi}
                   </TableCell>
+                  <TableCell className="px-4 py-3 text-start">
+                    <span
+                      className={`inline-flex rounded-full px-2.5 py-1 text-theme-xs font-medium ${
+                        item.trangThai
+                          ? "bg-success-50 text-success-700 dark:bg-success-500/10 dark:text-success-400"
+                          : "bg-warning-50 text-warning-700 dark:bg-warning-500/10 dark:text-warning-300"
+                      }`}
+                    >
+                      {item.trangThai ? "Hien" : "Da an"}
+                    </span>
+                  </TableCell>
                   <TableCell className="px-4 py-3 text-gray-500 text-start text-theme-sm dark:text-gray-400">
                     {formatDate(item.createdAt)}
                   </TableCell>
@@ -150,6 +170,22 @@ export default function ThemVatPhamTable({
                         aria-label={`Sua ${item.tenVatPham}`}
                       >
                         <PencilIcon className="size-4" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => onToggleVisibilityItem?.(item)}
+                        className={`inline-flex items-center justify-center w-8 h-8 rounded-lg border ${
+                          item.trangThai
+                            ? "text-success-600 border-success-200 hover:bg-success-50 dark:border-success-500/30 dark:text-success-400 dark:hover:bg-success-500/10"
+                            : "text-warning-600 border-warning-200 hover:bg-warning-50 dark:border-warning-500/30 dark:text-warning-300 dark:hover:bg-warning-500/10"
+                        }`}
+                        aria-label={item.trangThai ? `An ${item.tenVatPham}` : `Hien ${item.tenVatPham}`}
+                      >
+                        {item.trangThai ? (
+                          <EyeIcon className="fill-gray-500 dark:fill-gray-400 size-4" />
+                        ) : (
+                          <EyeCloseIcon className="fill-gray-500 dark:fill-gray-400 size-4" />
+                        )}
                       </button>
                       <button
                         type="button"
@@ -168,7 +204,7 @@ export default function ThemVatPhamTable({
                 <TableRow>
                   <td
                     className="px-5 py-10 text-center text-gray-500 text-theme-sm dark:text-gray-400"
-                    colSpan={7}
+                    colSpan={8}
                   >
                     Chua co vat pham nao.
                   </td>

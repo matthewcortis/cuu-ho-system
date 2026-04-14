@@ -12,4 +12,6 @@ import com.backend.cuutro.entities.ChiTietCuuTroEntity;
 public interface ChiTietCuuTroRepository extends JpaRepository<ChiTietCuuTroEntity, Long>, JpaSpecificationExecutor<ChiTietCuuTroEntity> {
 
 	List<ChiTietCuuTroEntity> findByPhieuCuuTro_IdOrderByIdAsc(Long phieuCuuTroId);
+
+	boolean existsByVatPham_Id(Long vatPhamId);
 }

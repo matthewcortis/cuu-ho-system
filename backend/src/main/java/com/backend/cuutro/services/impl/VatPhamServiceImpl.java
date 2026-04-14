@@ -8,6 +8,7 @@ import java.util.Locale;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
@@ -26,7 +27,9 @@ import com.backend.cuutro.entities.DonViEntity;
 import com.backend.cuutro.entities.NhomVatPhamEntity;
 import com.backend.cuutro.entities.TepTinEntity;
 import com.backend.cuutro.entities.VatPhamEntity;
+import com.backend.cuutro.exception.customize.InvalidFieldException;
 import com.backend.cuutro.mapper.VatPhamMapper;
+import com.backend.cuutro.repository.ChiTietCuuTroRepository;
 import com.backend.cuutro.repository.DonViRepository;
 import com.backend.cuutro.repository.NhomVatPhamRepository;
 import com.backend.cuutro.repository.TepTinRepository;
@@ -46,6 +49,7 @@ import lombok.extern.slf4j.Slf4j;
 public class VatPhamServiceImpl implements VatPhamService {
 
 	private final VatPhamRepository vatPhamRepository;
+	private final ChiTietCuuTroRepository chiTietCuuTroRepository;
 	private final DonViRepository donViRepository;
 	private final NhomVatPhamRepository nhomVatPhamRepository;
 	private final TepTinRepository tepTinRepository;
@@ -98,7 +102,18 @@ public class VatPhamServiceImpl implements VatPhamService {
 	@Transactional
 	public void delete(Long id) {
 		VatPhamEntity entity = getEntityOrThrow(id);
-		vatPhamRepository.delete(entity);
+		if (chiTietCuuTroRepository.existsByVatPham_Id(id)) {
+			throw new InvalidFieldException(
+					"Khong the xoa vat pham vi da duoc su dung trong chi tiet cuu tro.");
+		}
+
+		try {
+			vatPhamRepository.delete(entity);
+			vatPhamRepository.flush();
+		} catch (DataIntegrityViolationException ex) {
+			throw new InvalidFieldException(
+					"Khong the xoa vat pham vi du lieu dang duoc tham chieu boi bang khac.");
+		}
 	}
 
 	@Override

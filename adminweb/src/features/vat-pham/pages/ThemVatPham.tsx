@@ -9,6 +9,10 @@ import Select from "@/components/form/Select";
 import ThemVatPhamTable, {
   type ThemVatPhamItem,
 } from "@/features/vat-pham/components/ThemVatPham";
+import ActionToast, {
+  type ActionToastData,
+  type ActionToastType,
+} from "@/features/vat-pham/components/ActionToast";
 import {
   createVatPhamWithImage,
   deleteVatPham,
@@ -64,6 +68,7 @@ function mapVatPhamDtoToItem(vatPham: VatPhamDto): ThemVatPhamItem {
     imageUrl,
     imagePath: imageUrl,
     tepTinId: vatPham.tepTin?.id ?? null,
+    trangThai: vatPham.trangThai,
     createdAt: vatPham.createdAt,
   };
 }
@@ -98,8 +103,22 @@ export default function ThemVatPhamPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
-  const [actionError, setActionError] = useState<string | null>(null);
+  const [actionToast, setActionToast] = useState<ActionToastData | null>(null);
   const createdObjectUrlsRef = useRef<string[]>([]);
+  const actionToastIdRef = useRef(0);
+
+  const showActionToast = useCallback(
+    (type: ActionToastType, title: string, message: string) => {
+      actionToastIdRef.current += 1;
+      setActionToast({
+        id: actionToastIdRef.current,
+        type,
+        title,
+        message,
+      });
+    },
+    []
+  );
 
   useEffect(
     () => () => {
@@ -226,7 +245,6 @@ export default function ThemVatPhamPage() {
         ...prev,
         imageFile: "",
       }));
-      setActionError(null);
     },
     [selectedImagePreviewUrl]
   );
@@ -255,7 +273,6 @@ export default function ThemVatPhamPage() {
       ...prev,
       [field]: "",
     }));
-    setActionError(null);
   };
 
   const handleSelectDonVi = (value: string) => {
@@ -264,7 +281,6 @@ export default function ThemVatPhamPage() {
       ...prev,
       donViId: "",
     }));
-    setActionError(null);
   };
 
   const handleSelectNhomVatPham = (value: string) => {
@@ -273,7 +289,6 @@ export default function ThemVatPhamPage() {
       ...prev,
       nhomVatPhamId: "",
     }));
-    setActionError(null);
   };
 
   const resetForm = (options?: { revokeImage?: boolean }) => {
@@ -287,7 +302,6 @@ export default function ThemVatPhamPage() {
     setErrors(getInitialErrors());
     setSelectInputKey((prev) => prev + 1);
     clearSelectedImage(options?.revokeImage ?? true);
-    setActionError(null);
   };
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
@@ -337,7 +351,6 @@ export default function ThemVatPhamPage() {
     }
 
     setIsSubmitting(true);
-    setActionError(null);
 
     try {
       if (editingItemId !== null) {
@@ -347,7 +360,7 @@ export default function ThemVatPhamPage() {
           donViId: Number(selectedDonViId),
           nhomVatPhamId: Number(selectedNhomVatPhamId),
           tepTinId: editingItem?.tepTinId ?? null,
-          trangThai: true,
+          trangThai: editingItem?.trangThai ?? true,
         });
         const updatedItem = mapVatPhamDtoToItem(updated);
         setItems((prev) =>
@@ -359,6 +372,11 @@ export default function ThemVatPhamPage() {
                 }
               : item
           )
+        );
+        showActionToast(
+          "success",
+          "Cap nhat thanh cong",
+          `Da cap nhat vat pham "${updatedItem.tenVatPham}".`
         );
         resetForm({ revokeImage: true });
         return;
@@ -380,9 +398,14 @@ export default function ThemVatPhamPage() {
 
       const createdItem = mapVatPhamDtoToItem(created);
       setItems((prev) => [createdItem, ...prev.filter((item) => item.id !== createdItem.id)]);
+      showActionToast(
+        "success",
+        "Them thanh cong",
+        `Da them vat pham "${createdItem.tenVatPham}".`
+      );
       resetForm({ revokeImage: true });
     } catch (error) {
-      setActionError(getApiErrorMessage(error));
+      showActionToast("error", "Thao tac that bai", getApiErrorMessage(error));
     } finally {
       setIsSubmitting(false);
     }
@@ -393,7 +416,11 @@ export default function ThemVatPhamPage() {
       return;
     }
     if (item.donViId === null || item.nhomVatPhamId === null) {
-      setActionError("Khong the chinh sua vat pham nay vi thieu don vi hoac nhom vat pham.");
+      showActionToast(
+        "error",
+        "Khong the chinh sua",
+        "Vat pham nay dang thieu don vi hoac nhom vat pham."
+      );
       return;
     }
 
@@ -407,7 +434,6 @@ export default function ThemVatPhamPage() {
     setSelectedNhomVatPhamId(String(item.nhomVatPhamId));
     setErrors(getInitialErrors());
     setSelectInputKey((prev) => prev + 1);
-    setActionError(null);
   };
 
   const handleDeleteItem = async (item: ThemVatPhamItem) => {
@@ -416,7 +442,6 @@ export default function ThemVatPhamPage() {
     }
 
     setIsSubmitting(true);
-    setActionError(null);
 
     try {
       await deleteVatPham(item.id);
@@ -427,8 +452,69 @@ export default function ThemVatPhamPage() {
       if (editingItemId === item.id) {
         resetForm({ revokeImage: true });
       }
+      showActionToast(
+        "success",
+        "Xoa thanh cong",
+        `Da xoa vat pham "${item.tenVatPham}".`
+      );
     } catch (error) {
-      setActionError(getApiErrorMessage(error));
+      showActionToast("error", "Khong the xoa", getApiErrorMessage(error));
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleToggleVisibilityItem = async (item: ThemVatPhamItem) => {
+    if (isSubmitting) {
+      return;
+    }
+    if (item.donViId === null || item.nhomVatPhamId === null) {
+      showActionToast(
+        "error",
+        "Khong the cap nhat trang thai",
+        "Vat pham nay dang thieu don vi hoac nhom vat pham."
+      );
+      return;
+    }
+
+    setIsSubmitting(true);
+
+    try {
+      const updated = await updateVatPham(item.id, {
+        tenVatPham: item.tenVatPham,
+        soLuong: item.soLuong,
+        donViId: item.donViId,
+        nhomVatPhamId: item.nhomVatPhamId,
+        tepTinId: item.tepTinId ?? null,
+        trangThai: !item.trangThai,
+      });
+      const updatedItem = mapVatPhamDtoToItem(updated);
+      setItems((prev) =>
+        prev.map((currentItem) =>
+          currentItem.id === item.id
+            ? {
+                ...currentItem,
+                ...updatedItem,
+              }
+            : currentItem
+        )
+      );
+      showActionToast(
+        "success",
+        updatedItem.trangThai ? "Da hien vat pham" : "Da an vat pham",
+        updatedItem.trangThai
+          ? `Vat pham "${updatedItem.tenVatPham}" da duoc hien.`
+          : `Vat pham "${updatedItem.tenVatPham}" da duoc an.`
+      );
+      if (editingItemId === item.id) {
+        resetForm({ revokeImage: true });
+      }
+    } catch (error) {
+      showActionToast(
+        "error",
+        "Khong the cap nhat trang thai",
+        getApiErrorMessage(error)
+      );
     } finally {
       setIsSubmitting(false);
     }
@@ -446,12 +532,6 @@ export default function ThemVatPhamPage() {
         {loadError && (
           <div className="rounded-lg border border-warning-200 bg-warning-50 px-4 py-3 text-theme-sm text-warning-700 dark:border-warning-500/30 dark:bg-warning-500/10 dark:text-warning-300">
             Khong the tai du lieu vat pham: {loadError}
-          </div>
-        )}
-
-        {actionError && (
-          <div className="rounded-lg border border-error-200 bg-error-50 px-4 py-3 text-theme-sm text-error-700 dark:border-error-500/30 dark:bg-error-500/10 dark:text-error-300">
-            {actionError}
           </div>
         )}
 
@@ -657,12 +737,17 @@ export default function ThemVatPhamPage() {
           <ThemVatPhamTable
             items={items}
             onEditItem={handleEditItem}
+            onToggleVisibilityItem={(item) => {
+              void handleToggleVisibilityItem(item);
+            }}
             onDeleteItem={(item) => {
               void handleDeleteItem(item);
             }}
           />
         </ComponentCard>
       </div>
+
+      <ActionToast toast={actionToast} onClose={() => setActionToast(null)} />
     </>
   );
 }
