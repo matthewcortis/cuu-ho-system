@@ -33,7 +33,7 @@ interface ThemVatPhamTableProps {
 
 function formatDate(value: string): string {
   const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return "Chua cap nhat";
+  if (Number.isNaN(date.getTime())) return "Chưa cập nhật";
   return date.toLocaleDateString("vi-VN");
 }
 
@@ -59,49 +59,49 @@ export default function ThemVatPhamTable({
                   isHeader
                   className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
                 >
-                  Anh
+                  Ảnh
                 </TableCell>
                 <TableCell
                   isHeader
                   className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
                 >
-                  Ten vat pham
+                  Tên vật phẩm
                 </TableCell>
                 <TableCell
                   isHeader
                   className="px-4 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
                 >
-                  Nhom vat pham
+                  Nhóm vật phẩm
                 </TableCell>
                 <TableCell
                   isHeader
                   className="px-4 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
                 >
-                  So luong
+                  Số lượng
                 </TableCell>
                 <TableCell
                   isHeader
                   className="px-4 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
                 >
-                  Don vi
+                  Đơn vị
                 </TableCell>
                 <TableCell
                   isHeader
                   className="px-4 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
                 >
-                  Trang thai
+                  Trạng thái
                 </TableCell>
                 <TableCell
                   isHeader
                   className="px-4 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
                 >
-                  Ngay tao
+                  Ngày tạo
                 </TableCell>
                 <TableCell
                   isHeader
                   className="px-4 py-3 font-medium text-gray-500 text-center text-theme-xs dark:text-gray-400"
                 >
-                  Hanh dong
+                  Hành động
                 </TableCell>
               </TableRow>
             </TableHeader>
@@ -129,7 +129,7 @@ export default function ThemVatPhamTable({
                       </button>
                     ) : (
                       <span className="text-theme-xs text-gray-500 dark:text-gray-400">
-                        Chua co anh
+                        Chưa có ảnh
                       </span>
                     )}
                   </TableCell>
@@ -155,7 +155,7 @@ export default function ThemVatPhamTable({
                           : "bg-warning-50 text-warning-700 dark:bg-warning-500/10 dark:text-warning-300"
                       }`}
                     >
-                      {item.trangThai ? "Hien" : "Da an"}
+                      {item.trangThai ? "Hiện" : "Đã ẩn"}
                     </span>
                   </TableCell>
                   <TableCell className="px-4 py-3 text-gray-500 text-start text-theme-sm dark:text-gray-400">
@@ -167,7 +167,7 @@ export default function ThemVatPhamTable({
                         type="button"
                         onClick={() => onEditItem?.(item)}
                         className="inline-flex items-center justify-center w-8 h-8 text-gray-600 border border-gray-200 rounded-lg hover:bg-gray-100 hover:text-gray-800 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-white/10 dark:hover:text-white"
-                        aria-label={`Sua ${item.tenVatPham}`}
+                        aria-label={`Sửa ${item.tenVatPham}`}
                       >
                         <PencilIcon className="size-4" />
                       </button>
@@ -179,7 +179,11 @@ export default function ThemVatPhamTable({
                             ? "text-success-600 border-success-200 hover:bg-success-50 dark:border-success-500/30 dark:text-success-400 dark:hover:bg-success-500/10"
                             : "text-warning-600 border-warning-200 hover:bg-warning-50 dark:border-warning-500/30 dark:text-warning-300 dark:hover:bg-warning-500/10"
                         }`}
-                        aria-label={item.trangThai ? `An ${item.tenVatPham}` : `Hien ${item.tenVatPham}`}
+                        aria-label={
+                          item.trangThai
+                            ? `Ẩn ${item.tenVatPham}`
+                            : `Hiện ${item.tenVatPham}`
+                        }
                       >
                         {item.trangThai ? (
                           <EyeIcon className="fill-gray-500 dark:fill-gray-400 size-4" />
@@ -191,7 +195,7 @@ export default function ThemVatPhamTable({
                         type="button"
                         onClick={() => onDeleteItem?.(item)}
                         className="inline-flex items-center justify-center w-8 h-8 text-error-600 border border-error-200 rounded-lg hover:bg-error-50 dark:border-error-500/30 dark:text-error-400 dark:hover:bg-error-500/10"
-                        aria-label={`Xoa ${item.tenVatPham}`}
+                        aria-label={`Xóa ${item.tenVatPham}`}
                       >
                         <TrashBinIcon className="size-4" />
                       </button>
@@ -206,7 +210,7 @@ export default function ThemVatPhamTable({
                     className="px-5 py-10 text-center text-gray-500 text-theme-sm dark:text-gray-400"
                     colSpan={8}
                   >
-                    Chua co vat pham nao.
+                    Chưa có vật phẩm nào.
                   </td>
                 </TableRow>
               )}

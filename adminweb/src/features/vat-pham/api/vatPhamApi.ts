@@ -56,6 +56,11 @@ export interface VatPhamUpdateRequest {
   trangThai?: boolean;
 }
 
+export interface VatPhamImageUploadRequest {
+  imageFile: File;
+  tenVatPham: string;
+}
+
 export class VatPhamApiError extends Error {
   readonly status: number;
   readonly error: string | null;
@@ -265,6 +270,33 @@ export async function createVatPhamWithImage(
   const parsedItem = parseVatPhamDto(envelope.data);
   if (!parsedItem) {
     throw new VatPhamApiError("Backend khong tra ve vat pham vua tao", envelope.status);
+  }
+
+  return parsedItem;
+}
+
+export async function uploadVatPhamImage(
+  request: VatPhamImageUploadRequest
+): Promise<TepTinLiteDto> {
+  const authorization = getAuthHeaderOrThrow();
+  const formData = new FormData();
+  const tenVatPham = request.tenVatPham.trim();
+
+  formData.append("tepTin", request.imageFile);
+  formData.append("thuMuc", "vat-pham");
+  formData.append("tenTep", tenVatPham || `vat-pham-${Date.now()}`);
+
+  const envelope = await requestEnvelope<unknown>("/tep-tin/upload", {
+    method: "POST",
+    headers: {
+      Authorization: authorization,
+    },
+    body: formData,
+  });
+
+  const parsedItem = parseTepTinLite(envelope.data);
+  if (!parsedItem) {
+    throw new VatPhamApiError("Backend khong tra ve tep tin vua tai len", envelope.status);
   }
 
   return parsedItem;

@@ -17,6 +17,7 @@ import {
   createVatPhamWithImage,
   deleteVatPham,
   fetchVatPhamList,
+  uploadVatPhamImage,
   updateVatPham,
   type VatPhamDto,
   VatPhamApiError,
@@ -59,11 +60,11 @@ function mapVatPhamDtoToItem(vatPham: VatPhamDto): ThemVatPhamItem {
 
   return {
     id: vatPham.id,
-    tenVatPham: vatPham.tenVatPham?.trim() || "Chua dat ten",
+    tenVatPham: vatPham.tenVatPham?.trim() || "Chưa đặt tên",
     soLuong: Number.isFinite(vatPham.soLuong) ? vatPham.soLuong : 0,
-    donVi: vatPham.donVi?.ten?.trim() || "Chua chon don vi",
+    donVi: vatPham.donVi?.ten?.trim() || "Chưa chọn đơn vị",
     donViId: vatPham.donVi?.id ?? null,
-    nhomVatPham: vatPham.nhomVatPham?.ten?.trim() || "Chua chon nhom",
+    nhomVatPham: vatPham.nhomVatPham?.ten?.trim() || "Chưa chọn nhóm",
     nhomVatPhamId: vatPham.nhomVatPham?.id ?? null,
     imageUrl,
     imagePath: imageUrl,
@@ -81,7 +82,7 @@ function getApiErrorMessage(error: unknown): string {
     return error.message;
   }
 
-  return "Khong the xu ly yeu cau vat pham. Vui long thu lai.";
+  return "Không thể xử lý yêu cầu vật phẩm. Vui lòng thử lại.";
 }
 
 export default function ThemVatPhamPage() {
@@ -151,29 +152,29 @@ export default function ThemVatPhamPage() {
         if (vatPhamResult.status === "fulfilled") {
           setItems(vatPhamResult.value.map(mapVatPhamDtoToItem));
         } else {
-          loadErrors.push(`Vat pham: ${getApiErrorMessage(vatPhamResult.reason)}`);
+          loadErrors.push(`Vật phẩm: ${getApiErrorMessage(vatPhamResult.reason)}`);
         }
 
         if (donViResult.status === "fulfilled") {
           setDonViOptions(
             donViResult.value.map((item) => ({
               value: String(item.id),
-              label: item.ten?.trim() || "Khong co ten",
+              label: item.ten?.trim() || "Không có tên",
             }))
           );
         } else {
-          loadErrors.push(`Don vi: ${getApiErrorMessage(donViResult.reason)}`);
+          loadErrors.push(`Đơn vị: ${getApiErrorMessage(donViResult.reason)}`);
         }
 
         if (nhomVatPhamResult.status === "fulfilled") {
           setNhomVatPhamOptions(
             nhomVatPhamResult.value.map((item) => ({
               value: String(item.id),
-              label: item.ten?.trim() || "Khong co ten",
+              label: item.ten?.trim() || "Không có tên",
             }))
           );
         } else {
-          loadErrors.push(`Nhom vat pham: ${getApiErrorMessage(nhomVatPhamResult.reason)}`);
+          loadErrors.push(`Nhóm vật phẩm: ${getApiErrorMessage(nhomVatPhamResult.reason)}`);
         }
 
         setLoadError(loadErrors.length > 0 ? loadErrors.join(" | ") : null);
@@ -315,7 +316,7 @@ export default function ThemVatPhamPage() {
 
     const nextErrors = getInitialErrors();
     if (!tenVatPham) {
-      nextErrors.tenVatPham = "Vui long nhap ten vat pham.";
+      nextErrors.tenVatPham = "Vui lòng nhập tên vật phẩm.";
     }
     if (
       !formValues.soLuong.trim() ||
@@ -324,19 +325,19 @@ export default function ThemVatPhamPage() {
       soLuong <= 0 ||
       soLuong > MAX_SHORT
     ) {
-      nextErrors.soLuong = `So luong phai trong khoang 1 den ${MAX_SHORT}.`;
+      nextErrors.soLuong = `Số lượng phải trong khoảng 1 đến ${MAX_SHORT}.`;
     }
     if (
       editingItemId === null &&
       (!selectedImageFile || !selectedImagePreviewUrl || !selectedImageStoragePath)
     ) {
-      nextErrors.imageFile = "Vui long tai anh bang Dropzone.";
+      nextErrors.imageFile = "Vui lòng tải ảnh bằng Dropzone.";
     }
     if (!selectedDonViId) {
-      nextErrors.donViId = "Vui long chon don vi.";
+      nextErrors.donViId = "Vui lòng chọn đơn vị.";
     }
     if (!selectedNhomVatPhamId) {
-      nextErrors.nhomVatPhamId = "Vui long chon nhom vat pham.";
+      nextErrors.nhomVatPhamId = "Vui lòng chọn nhóm vật phẩm.";
     }
 
     setErrors(nextErrors);
@@ -354,12 +355,21 @@ export default function ThemVatPhamPage() {
 
     try {
       if (editingItemId !== null) {
+        let tepTinId = editingItem?.tepTinId ?? null;
+        if (selectedImageFile) {
+          const uploadedImage = await uploadVatPhamImage({
+            imageFile: selectedImageFile,
+            tenVatPham,
+          });
+          tepTinId = uploadedImage.id;
+        }
+
         const updated = await updateVatPham(editingItemId, {
           tenVatPham,
           soLuong,
           donViId: Number(selectedDonViId),
           nhomVatPhamId: Number(selectedNhomVatPhamId),
-          tepTinId: editingItem?.tepTinId ?? null,
+          tepTinId,
           trangThai: editingItem?.trangThai ?? true,
         });
         const updatedItem = mapVatPhamDtoToItem(updated);
@@ -375,8 +385,8 @@ export default function ThemVatPhamPage() {
         );
         showActionToast(
           "success",
-          "Cap nhat thanh cong",
-          `Da cap nhat vat pham "${updatedItem.tenVatPham}".`
+          "Cập nhật thành công",
+          `Đã cập nhật vật phẩm "${updatedItem.tenVatPham}".`
         );
         resetForm({ revokeImage: true });
         return;
@@ -400,12 +410,12 @@ export default function ThemVatPhamPage() {
       setItems((prev) => [createdItem, ...prev.filter((item) => item.id !== createdItem.id)]);
       showActionToast(
         "success",
-        "Them thanh cong",
-        `Da them vat pham "${createdItem.tenVatPham}".`
+        "Thêm thành công",
+        `Đã thêm vật phẩm "${createdItem.tenVatPham}".`
       );
       resetForm({ revokeImage: true });
     } catch (error) {
-      showActionToast("error", "Thao tac that bai", getApiErrorMessage(error));
+      showActionToast("error", "Thao tác thất bại", getApiErrorMessage(error));
     } finally {
       setIsSubmitting(false);
     }
@@ -418,8 +428,8 @@ export default function ThemVatPhamPage() {
     if (item.donViId === null || item.nhomVatPhamId === null) {
       showActionToast(
         "error",
-        "Khong the chinh sua",
-        "Vat pham nay dang thieu don vi hoac nhom vat pham."
+        "Không thể chỉnh sửa",
+        "Vật phẩm này đang thiếu đơn vị hoặc nhóm vật phẩm."
       );
       return;
     }
@@ -454,11 +464,11 @@ export default function ThemVatPhamPage() {
       }
       showActionToast(
         "success",
-        "Xoa thanh cong",
-        `Da xoa vat pham "${item.tenVatPham}".`
+        "Xóa thành công",
+        `Đã xóa vật phẩm "${item.tenVatPham}".`
       );
     } catch (error) {
-      showActionToast("error", "Khong the xoa", getApiErrorMessage(error));
+      showActionToast("error", "Không thể xóa", getApiErrorMessage(error));
     } finally {
       setIsSubmitting(false);
     }
@@ -471,8 +481,8 @@ export default function ThemVatPhamPage() {
     if (item.donViId === null || item.nhomVatPhamId === null) {
       showActionToast(
         "error",
-        "Khong the cap nhat trang thai",
-        "Vat pham nay dang thieu don vi hoac nhom vat pham."
+        "Không thể cập nhật trạng thái",
+        "Vật phẩm này đang thiếu đơn vị hoặc nhóm vật phẩm."
       );
       return;
     }
@@ -501,10 +511,10 @@ export default function ThemVatPhamPage() {
       );
       showActionToast(
         "success",
-        updatedItem.trangThai ? "Da hien vat pham" : "Da an vat pham",
+        updatedItem.trangThai ? "Đã hiện vật phẩm" : "Đã ẩn vật phẩm",
         updatedItem.trangThai
-          ? `Vat pham "${updatedItem.tenVatPham}" da duoc hien.`
-          : `Vat pham "${updatedItem.tenVatPham}" da duoc an.`
+          ? `Vật phẩm "${updatedItem.tenVatPham}" đã được hiện.`
+          : `Vật phẩm "${updatedItem.tenVatPham}" đã được ẩn.`
       );
       if (editingItemId === item.id) {
         resetForm({ revokeImage: true });
@@ -512,7 +522,7 @@ export default function ThemVatPhamPage() {
     } catch (error) {
       showActionToast(
         "error",
-        "Khong the cap nhat trang thai",
+        "Không thể cập nhật trạng thái",
         getApiErrorMessage(error)
       );
     } finally {
@@ -523,40 +533,40 @@ export default function ThemVatPhamPage() {
   return (
     <>
       <PageMeta
-        title="Them Vat Pham"
-        description="Trang them vat pham voi lua chon don vi va nhom vat pham."
+        title="Thêm vật phẩm"
+        description="Trang thêm vật phẩm với lựa chọn đơn vị và nhóm vật phẩm."
       />
-      <PageBreadcrumb pageTitle="Them Vat Pham" />
+      <PageBreadcrumb pageTitle="Thêm vật phẩm" />
 
       <div className="space-y-6">
         {loadError && (
           <div className="rounded-lg border border-warning-200 bg-warning-50 px-4 py-3 text-theme-sm text-warning-700 dark:border-warning-500/30 dark:bg-warning-500/10 dark:text-warning-300">
-            Khong the tai du lieu vat pham: {loadError}
+            Không thể tải dữ liệu vật phẩm: {loadError}
           </div>
         )}
 
         <ComponentCard
-          title={editingItemId !== null ? "Chinh sua vat pham" : "Nhap vat pham"}
+          title={editingItemId !== null ? "Chỉnh sửa vật phẩm" : "Nhập vật phẩm"}
           desc={
             editingItemId !== null
-              ? "Cap nhat thong tin vat pham. Anh hien tai duoc giu nguyen."
-              : "Nhap thong tin vat pham"
+              ? "Cập nhật thông tin vật phẩm và có thể thay ảnh vật phẩm."
+              : "Nhập thông tin vật phẩm"
           }
         >
           {isLoading && (
             <div className="mb-4 rounded-lg border border-brand-200 bg-brand-50 px-4 py-3 text-theme-sm text-brand-700 dark:border-brand-500/30 dark:bg-brand-500/10 dark:text-brand-300">
-              Dang tai danh sach vat pham, don vi va nhom vat pham...
+              Đang tải danh sách vật phẩm, đơn vị và nhóm vật phẩm...
             </div>
           )}
 
           <form onSubmit={handleSubmit} className="space-y-5">
             <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
               <div>
-                <Label htmlFor="ten-vat-pham">Ten vat pham</Label>
+                <Label htmlFor="ten-vat-pham">Tên vật phẩm</Label>
                 <Input
                   id="ten-vat-pham"
                   type="text"
-                  placeholder="Vi du: Nuoc"
+                  placeholder="Ví dụ: Nước"
                   value={formValues.tenVatPham}
                   onChange={(event) =>
                     handleChangeFormValue("tenVatPham", event.target.value)
@@ -567,14 +577,14 @@ export default function ThemVatPhamPage() {
               </div>
 
               <div>
-                <Label htmlFor="so-luong">So luong</Label>
+                <Label htmlFor="so-luong">Số lượng</Label>
                 <Input
                   id="so-luong"
                   type="number"
                   min="1"
                   max={String(MAX_SHORT)}
                   step={1}
-                  placeholder="Vi du: 100"
+                  placeholder="Ví dụ: 100"
                   value={formValues.soLuong}
                   onChange={(event) =>
                     handleChangeFormValue("soLuong", event.target.value)
@@ -584,82 +594,104 @@ export default function ThemVatPhamPage() {
                 />
               </div>
 
-              {editingItemId === null ? (
-                <div className="lg:col-span-2">
-                  <Label>Anh vat pham</Label>
-                  <div
-                    {...getRootProps()}
-                    className={`transition border border-dashed rounded-xl cursor-pointer p-6 lg:p-8 ${
-                      isDragActive
-                        ? "border-brand-500 bg-gray-100 dark:bg-gray-800"
-                        : "border-gray-300 bg-gray-50 dark:border-gray-700 dark:bg-gray-900"
-                    }`}
-                  >
-                    <input {...getInputProps()} />
-                    <div className="flex flex-col items-center text-center">
-                      <div className="mb-3 flex h-14 w-14 items-center justify-center rounded-full bg-gray-200 text-gray-700 dark:bg-gray-800 dark:text-gray-400">
-                        <svg
-                          className="fill-current"
-                          width="24"
-                          height="24"
-                          viewBox="0 0 24 24"
-                          xmlns="http://www.w3.org/2000/svg"
-                        >
-                          <path d="M12 3.25C11.8 3.25 11.61 3.33 11.46 3.48L7.46 7.48C7.17 7.77 7.17 8.23 7.46 8.52C7.75 8.81 8.21 8.81 8.5 8.52L11.25 5.77V14.5C11.25 14.91 11.59 15.25 12 15.25C12.41 15.25 12.75 14.91 12.75 14.5V5.77L15.5 8.52C15.79 8.81 16.25 8.81 16.54 8.52C16.83 8.23 16.83 7.77 16.54 7.48L12.54 3.48C12.39 3.33 12.2 3.25 12 3.25Z" />
-                          <path d="M5 15.25C5.41 15.25 5.75 15.59 5.75 16V18C5.75 18.41 6.09 18.75 6.5 18.75H17.5C17.91 18.75 18.25 18.41 18.25 18V16C18.25 15.59 18.59 15.25 19 15.25C19.41 15.25 19.75 15.59 19.75 16V18C19.75 19.24 18.74 20.25 17.5 20.25H6.5C5.26 20.25 4.25 19.24 4.25 18V16C4.25 15.59 4.59 15.25 5 15.25Z" />
-                        </svg>
-                      </div>
-                      <p className="text-theme-sm font-medium text-gray-800 dark:text-white/90">
-                        {isDragActive ? "Drop file anh vao day" : "Keo tha anh vao day"}
+              <div className="lg:col-span-2">
+                <Label>Ảnh vật phẩm</Label>
+                <div
+                  {...getRootProps()}
+                  className={`transition border border-dashed rounded-xl cursor-pointer p-6 lg:p-8 ${
+                    isDragActive
+                      ? "border-brand-500 bg-gray-100 dark:bg-gray-800"
+                      : "border-gray-300 bg-gray-50 dark:border-gray-700 dark:bg-gray-900"
+                  }`}
+                >
+                  <input {...getInputProps()} />
+                  <div className="flex flex-col items-center text-center">
+                    <div className="mb-3 flex h-14 w-14 items-center justify-center rounded-full bg-gray-200 text-gray-700 dark:bg-gray-800 dark:text-gray-400">
+                      <svg
+                        className="fill-current"
+                        width="24"
+                        height="24"
+                        viewBox="0 0 24 24"
+                        xmlns="http://www.w3.org/2000/svg"
+                      >
+                        <path d="M12 3.25C11.8 3.25 11.61 3.33 11.46 3.48L7.46 7.48C7.17 7.77 7.17 8.23 7.46 8.52C7.75 8.81 8.21 8.81 8.5 8.52L11.25 5.77V14.5C11.25 14.91 11.59 15.25 12 15.25C12.41 15.25 12.75 14.91 12.75 14.5V5.77L15.5 8.52C15.79 8.81 16.25 8.81 16.54 8.52C16.83 8.23 16.83 7.77 16.54 7.48L12.54 3.48C12.39 3.33 12.2 3.25 12 3.25Z" />
+                        <path d="M5 15.25C5.41 15.25 5.75 15.59 5.75 16V18C5.75 18.41 6.09 18.75 6.5 18.75H17.5C17.91 18.75 18.25 18.41 18.25 18V16C18.25 15.59 18.59 15.25 19 15.25C19.41 15.25 19.75 15.59 19.75 16V18C19.75 19.24 18.74 20.25 17.5 20.25H6.5C5.26 20.25 4.25 19.24 4.25 18V16C4.25 15.59 4.59 15.25 5 15.25Z" />
+                      </svg>
+                    </div>
+                    <p className="text-theme-sm font-medium text-gray-800 dark:text-white/90">
+                      {isDragActive
+                        ? "Thả file ảnh vào đây"
+                        : editingItemId !== null
+                          ? "Kéo thả ảnh mới vào đây để thay thế"
+                          : "Kéo thả ảnh vào đây"}
+                    </p>
+                    <p className="mt-1 text-theme-xs text-gray-500 dark:text-gray-400">
+                      Hoặc bấm để chọn file PNG, JPG, WebP, SVG, GIF
+                    </p>
+                  </div>
+                </div>
+
+                {selectedImagePreviewUrl ? (
+                  <div className="mt-3 flex items-start gap-3 rounded-xl border border-gray-200 bg-gray-50 p-3 dark:border-white/[0.08] dark:bg-white/[0.03]">
+                    <img
+                      src={selectedImagePreviewUrl}
+                      alt="Xem trước ảnh mới"
+                      className="h-16 w-16 rounded-lg object-cover"
+                    />
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate font-medium text-gray-800 text-theme-sm dark:text-white/90">
+                        {selectedImageFile?.name}
                       </p>
-                      <p className="mt-1 text-theme-xs text-gray-500 dark:text-gray-400">
-                        Hoac bam de chon file PNG, JPG, WebP, SVG, GIF
+                      <p className="mt-1 break-all text-theme-xs text-gray-500 dark:text-gray-400">
+                        Tệp sẽ được cập nhật: {selectedImageStoragePath}
                       </p>
+                      <button
+                        type="button"
+                        onClick={() => clearSelectedImage(true)}
+                        className="mt-2 inline-flex items-center rounded-lg border border-gray-300 px-3 py-1.5 text-theme-xs font-medium text-gray-700 hover:bg-gray-100 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-white/10"
+                      >
+                        Bỏ ảnh mới
+                      </button>
                     </div>
                   </div>
-
-                  {selectedImagePreviewUrl && (
+                ) : (
+                  editingItem?.imageUrl && (
                     <div className="mt-3 flex items-start gap-3 rounded-xl border border-gray-200 bg-gray-50 p-3 dark:border-white/[0.08] dark:bg-white/[0.03]">
                       <img
-                        src={selectedImagePreviewUrl}
-                        alt="Preview"
+                        src={editingItem.imageUrl}
+                        alt={`Ảnh hiện tại của ${editingItem.tenVatPham}`}
                         className="h-16 w-16 rounded-lg object-cover"
                       />
                       <div className="min-w-0 flex-1">
                         <p className="truncate font-medium text-gray-800 text-theme-sm dark:text-white/90">
-                          {selectedImageFile?.name}
+                          Ảnh hiện tại
                         </p>
                         <p className="mt-1 break-all text-theme-xs text-gray-500 dark:text-gray-400">
-                          Tep tai len: {selectedImageStoragePath}
+                          {editingItem.imagePath || editingItem.imageUrl}
                         </p>
-                        <button
-                          type="button"
-                          onClick={() => clearSelectedImage(true)}
-                          className="mt-2 inline-flex items-center rounded-lg border border-gray-300 px-3 py-1.5 text-theme-xs font-medium text-gray-700 hover:bg-gray-100 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-white/10"
-                        >
-                          Bo anh da chon
-                        </button>
                       </div>
                     </div>
-                  )}
+                  )
+                )}
 
-                  {errors.imageFile && (
-                    <p className="mt-1.5 text-xs text-error-500">{errors.imageFile}</p>
-                  )}
-                </div>
-              ) : (
-                <div className="lg:col-span-2 rounded-xl border border-gray-200 bg-gray-50 p-4 text-theme-sm text-gray-600 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300">
-                  Che do chinh sua chi cap nhat thong tin vat pham. Anh hien tai se duoc giu nguyen.
-                </div>
-              )}
+                {editingItemId !== null && (
+                  <p className="mt-2 text-theme-xs text-gray-500 dark:text-gray-400">
+                    Nếu không chọn ảnh mới, hệ thống sẽ giữ nguyên ảnh hiện tại.
+                  </p>
+                )}
+
+                {errors.imageFile && (
+                  <p className="mt-1.5 text-xs text-error-500">{errors.imageFile}</p>
+                )}
+              </div>
 
               <div>
-                <Label>Chon don vi</Label>
+                <Label>Chọn đơn vị</Label>
                 <Select
                   key={`don-vi-${selectInputKey}`}
                   defaultValue={selectedDonViId}
                   options={donViOptions}
-                  placeholder="Chon don vi"
+                  placeholder="Chọn đơn vị"
                   onChange={handleSelectDonVi}
                   className="dark:bg-dark-900"
                 />
@@ -669,12 +701,12 @@ export default function ThemVatPhamPage() {
               </div>
 
               <div>
-                <Label>Them vao nhom vat pham</Label>
+                <Label>Thêm vào nhóm vật phẩm</Label>
                 <Select
                   key={`nhom-vat-pham-${selectInputKey}`}
                   defaultValue={selectedNhomVatPhamId}
                   options={nhomVatPhamOptions}
-                  placeholder="Chon nhom vat pham"
+                  placeholder="Chọn nhóm vật phẩm"
                   onChange={handleSelectNhomVatPham}
                   className="dark:bg-dark-900"
                 />
@@ -686,7 +718,7 @@ export default function ThemVatPhamPage() {
 
             {selectedNhomVatPhamLabel && (
               <p className="text-theme-sm text-gray-600 dark:text-gray-300">
-                Vat pham se duoc them vao nhom:
+                Vật phẩm sẽ được thêm vào nhóm:
                 <span className="ml-1 font-medium text-brand-600 dark:text-brand-400">
                   {selectedNhomVatPhamLabel}
                 </span>
@@ -694,7 +726,7 @@ export default function ThemVatPhamPage() {
             )}
 
             <p className="text-theme-xs text-gray-500 dark:text-gray-400">
-              Ban ghi tep tin hien tai: {tepTinCount}
+              Bản ghi tệp tin hiện tại: {tepTinCount}
             </p>
 
             <div className="flex flex-wrap items-center gap-3">
@@ -704,10 +736,10 @@ export default function ThemVatPhamPage() {
                 className="inline-flex items-center justify-center rounded-lg bg-brand-500 px-4 py-2.5 text-sm font-medium text-white hover:bg-brand-600 disabled:cursor-not-allowed disabled:opacity-70"
               >
                 {isSubmitting
-                  ? "Dang xu ly..."
+                  ? "Đang xử lý..."
                   : editingItemId !== null
-                    ? "Cap nhat vat pham"
-                    : "Them vat pham"}
+                    ? "Cập nhật vật phẩm"
+                    : "Thêm vật phẩm"}
               </button>
 
               <button
@@ -716,7 +748,7 @@ export default function ThemVatPhamPage() {
                 onClick={() => resetForm({ revokeImage: true })}
                 className="inline-flex items-center justify-center rounded-lg border border-gray-300 px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-70 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-white/10"
               >
-                Dat lai
+                Đặt lại
               </button>
 
               {editingItemId !== null && (
@@ -726,14 +758,14 @@ export default function ThemVatPhamPage() {
                   onClick={() => resetForm({ revokeImage: true })}
                   className="inline-flex items-center justify-center rounded-lg border border-gray-300 px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-70 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-white/10"
                 >
-                  Huy chinh sua
+                  Hủy chỉnh sửa
                 </button>
               )}
             </div>
           </form>
         </ComponentCard>
 
-        <ComponentCard title="Danh sach vat pham da them">
+        <ComponentCard title="Danh sách vật phẩm đã thêm">
           <ThemVatPhamTable
             items={items}
             onEditItem={handleEditItem}
