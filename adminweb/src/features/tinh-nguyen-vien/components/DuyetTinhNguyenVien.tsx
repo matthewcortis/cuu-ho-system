@@ -1,11 +1,12 @@
-import { useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { CheckLineIcon, TrashBinIcon } from "@/icons";
 import {
-  buildVolunteerTableRows,
-  createVolunteerDatabase,
-  getVaiTroLabel,
-  type VolunteerTableRow,
-} from "@/features/tinh-nguyen-vien/data/tinhNguyenVienData";
+  duyetTinhNguyenVien,
+  fetchChoXetDuyetTinhNguyenVien,
+  TinhNguyenVienApiError,
+  type TinhNguyenVienChoDuyetItem,
+  xoaTinhNguyenVien,
+} from "@/features/tinh-nguyen-vien/api/tinhNguyenVienApi";
 import {
   Table,
   TableBody,
@@ -13,83 +14,153 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Modal } from "@/components/ui/modal";
 
-interface DuyetTinhNguyenVienProps {
-  onEditVolunteer?: (volunteer: VolunteerTableRow) => void;
-  onDeleteVolunteer?: (volunteer: VolunteerTableRow) => void;
+function getApiErrorMessage(error: unknown): string {
+  if (error instanceof TinhNguyenVienApiError) {
+    return error.message;
+  }
+
+  if (error instanceof Error && error.message) {
+    return error.message;
+  }
+
+  return "Không thể xử lý yêu cầu tình nguyện viên. Vui lòng thử lại.";
 }
 
-interface TeamOption {
-  id: number;
-  tenDoiNhom: string;
-  soDienThoai: string;
-  diaChi: string;
-  dangHoatDong: boolean;
+function extractSimpleDate(raw: string): string {
+  const parsed = Date.parse(raw);
+  if (Number.isNaN(parsed)) {
+    return "Không rõ thời gian";
+  }
+
+  return new Intl.DateTimeFormat("vi-VN", {
+    dateStyle: "short",
+    timeStyle: "short",
+  }).format(parsed);
 }
 
-export default function DuyetTinhNguyenVien({
-  onEditVolunteer,
-  onDeleteVolunteer,
-}: DuyetTinhNguyenVienProps) {
-  const database = useMemo(() => createVolunteerDatabase(), []);
-  const volunteers = useMemo(() => buildVolunteerTableRows(database), [database]);
-  const teamOptions = useMemo<TeamOption[]>(
-    () =>
-      database.doi_nhom.map((team) => {
-        const viTri = database.vi_tri.find((item) => item.id === team.vi_tri_id);
+export default function DuyetTinhNguyenVien() {
+  const [volunteers, setVolunteers] = useState<TinhNguyenVienChoDuyetItem[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
+  const [isMutatingByVolunteerId, setIsMutatingByVolunteerId] = useState<
+    Record<number, boolean>
+  >({});
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const loadVolunteers = async () => {
+      setIsLoading(true);
+      setLoadError(null);
+
+      try {
+        const pendingVolunteers = await fetchChoXetDuyetTinhNguyenVien();
+        if (!isMounted) {
+          return;
+        }
+        setVolunteers(pendingVolunteers);
+      } catch (error) {
+        if (!isMounted) {
+          return;
+        }
+        setLoadError(getApiErrorMessage(error));
+      } finally {
+        if (isMounted) {
+          setIsLoading(false);
+        }
+      }
+    };
+
+    void loadVolunteers();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  const setMutatingState = (volunteerId: number, isMutating: boolean) => {
+    setIsMutatingByVolunteerId((prev) => {
+      if (isMutating) {
         return {
-          id: team.id,
-          tenDoiNhom: team.ten_doi_nhom,
-          soDienThoai: team.so_dien_thoai ?? "Chua cap nhat",
-          diaChi: viTri?.dia_chi ?? "Chua cap nhat",
-          dangHoatDong: Boolean(team.trang_thai_hoat_dong),
+          ...prev,
+          [volunteerId]: true,
         };
-      }),
-    [database]
-  );
+      }
 
-  const [selectedVolunteer, setSelectedVolunteer] =
-    useState<VolunteerTableRow | null>(null);
-  const [isTeamDialogOpen, setIsTeamDialogOpen] = useState(false);
-  const [selectedTeamIdByVolunteerId, setSelectedTeamIdByVolunteerId] =
-    useState<Record<number, number>>({});
-
-  const handleApprove = (volunteer: VolunteerTableRow) => {
-    const selectedTeamId = selectedTeamIdByVolunteerId[volunteer.id];
-    const selectedTeam = teamOptions.find((team) => team.id === selectedTeamId);
-    if (!selectedTeam) return;
-
-    onEditVolunteer?.({
-      ...volunteer,
-      doiNhom: selectedTeam.tenDoiNhom,
+      const nextState = { ...prev };
+      delete nextState[volunteerId];
+      return nextState;
     });
   };
-  const handleDelete = (volunteer: VolunteerTableRow) =>
-    onDeleteVolunteer?.(volunteer);
-  const handleOpenTeamDialog = (volunteer: VolunteerTableRow) => {
-    setSelectedVolunteer(volunteer);
-    setIsTeamDialogOpen(true);
-  };
-  const handleCloseTeamDialog = () => {
-    setIsTeamDialogOpen(false);
-    setSelectedVolunteer(null);
-  };
-  const handleSelectTeam = (teamId: number) => {
-    if (!selectedVolunteer) return;
 
-    setSelectedTeamIdByVolunteerId((prev) => ({
-      ...prev,
-      [selectedVolunteer.id]: teamId,
-    }));
-    handleCloseTeamDialog();
+  const handleApprove = async (volunteer: TinhNguyenVienChoDuyetItem) => {
+    if (isMutatingByVolunteerId[volunteer.id]) {
+      return;
+    }
+
+    setActionError(null);
+    setMutatingState(volunteer.id, true);
+
+    try {
+      await duyetTinhNguyenVien(volunteer.id);
+      setVolunteers((prev) => prev.filter((item) => item.id !== volunteer.id));
+    } catch (error) {
+      setActionError(getApiErrorMessage(error));
+    } finally {
+      setMutatingState(volunteer.id, false);
+    }
+  };
+
+  const handleDelete = async (volunteer: TinhNguyenVienChoDuyetItem) => {
+    if (isMutatingByVolunteerId[volunteer.id]) {
+      return;
+    }
+
+    const shouldDelete = window.confirm(
+      `Bạn có chắc chắn muốn xóa tình nguyện viên ${volunteer.ten}?`
+    );
+    if (!shouldDelete) {
+      return;
+    }
+
+    setActionError(null);
+    setMutatingState(volunteer.id, true);
+
+    try {
+      await xoaTinhNguyenVien(volunteer.id);
+      setVolunteers((prev) => prev.filter((item) => item.id !== volunteer.id));
+    } catch (error) {
+      setActionError(getApiErrorMessage(error));
+    } finally {
+      setMutatingState(volunteer.id, false);
+    }
   };
 
   return (
     <>
+      {loadError && (
+        <div className="mb-4 rounded-lg border border-warning-200 bg-warning-50 px-4 py-3 text-theme-sm text-warning-700 dark:border-warning-500/30 dark:bg-warning-500/10 dark:text-warning-300">
+          Không thể lấy danh sách tình nguyện viên chờ duyệt: {loadError}
+        </div>
+      )}
+
+      {actionError && (
+        <div className="mb-4 rounded-lg border border-error-200 bg-error-50 px-4 py-3 text-theme-sm text-error-700 dark:border-error-500/30 dark:bg-error-500/10 dark:text-error-300">
+          {actionError}
+        </div>
+      )}
+
+      {isLoading && (
+        <div className="mb-4 rounded-lg border border-brand-200 bg-brand-50 px-4 py-3 text-theme-sm text-brand-700 dark:border-brand-500/30 dark:bg-brand-500/10 dark:text-brand-300">
+          Đang tải danh sách tình nguyện viên chờ duyệt...
+        </div>
+      )}
+
       <div className="overflow-hidden rounded-xl border border-gray-200 bg-white dark:border-white/[0.05] dark:bg-white/[0.03]">
         <div className="max-w-full overflow-x-auto custom-scrollbar">
-          <Table className="min-w-[1000px]">
+          <Table className="min-w-[1120px]">
             <TableHeader className="border-b border-gray-100 dark:border-white/[0.05]">
               <TableRow>
                 <TableCell
@@ -108,7 +179,13 @@ export default function DuyetTinhNguyenVien({
                   isHeader
                   className="px-4 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
                 >
-                  Đội nhóm
+                  Có thể giúp
+                </TableCell>
+                <TableCell
+                  isHeader
+                  className="px-4 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
+                >
+                  Ghi chú
                 </TableCell>
                 <TableCell
                   isHeader
@@ -121,16 +198,13 @@ export default function DuyetTinhNguyenVien({
 
             <TableBody className="divide-y divide-gray-100 dark:divide-white/[0.05]">
               {volunteers.map((volunteer) => {
-                const selectedTeamId = selectedTeamIdByVolunteerId[volunteer.id];
-                const selectedTeam = teamOptions.find(
-                  (team) => team.id === selectedTeamId
-                );
+                const isMutating = Boolean(isMutatingByVolunteerId[volunteer.id]);
 
                 return (
                   <TableRow key={volunteer.id}>
                     <TableCell className="px-5 py-4 sm:px-6 text-start">
                       <div className="flex items-start gap-3">
-                        <div className="w-12 h-12 overflow-hidden rounded-full">
+                        <div className="h-12 w-12 overflow-hidden rounded-full">
                           <img
                             width={48}
                             height={48}
@@ -144,13 +218,13 @@ export default function DuyetTinhNguyenVien({
                             {volunteer.ten}
                           </span>
                           <span className="block text-gray-500 text-theme-xs dark:text-gray-400">
-                            {getVaiTroLabel(volunteer.vaiTro)}
-                          </span>
-                          <span className="block text-gray-500 text-theme-xs dark:text-gray-400">
                             SĐT: {volunteer.soDienThoai}
                           </span>
                           <span className="block text-gray-500 text-theme-xs dark:text-gray-400">
                             Email: {volunteer.email}
+                          </span>
+                          <span className="block text-gray-500 text-theme-xs dark:text-gray-400">
+                            Đăng ký lúc: {extractSimpleDate(volunteer.createdAt)}
                           </span>
                         </div>
                       </div>
@@ -159,30 +233,11 @@ export default function DuyetTinhNguyenVien({
                     <TableCell className="px-4 py-3 text-gray-500 text-start text-theme-sm dark:text-gray-400">
                       {volunteer.diaChi}
                     </TableCell>
-
-                    <TableCell className="px-4 py-3 text-start">
-                      {selectedTeam ? (
-                        <div className="flex items-center gap-2">
-                          <span className="inline-flex rounded-full border border-brand-200 bg-brand-50 px-3 py-1.5 text-theme-xs font-medium text-brand-700 dark:border-brand-500/30 dark:bg-brand-500/10 dark:text-brand-300">
-                            {selectedTeam.tenDoiNhom}
-                          </span>
-                          <button
-                            type="button"
-                            onClick={() => handleOpenTeamDialog(volunteer)}
-                            className="inline-flex items-center rounded-lg border border-gray-200 px-3 py-1.5 text-theme-xs font-medium text-gray-600 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-white/10"
-                          >
-                            Chọn lại
-                          </button>
-                        </div>
-                      ) : (
-                        <button
-                          type="button"
-                          onClick={() => handleOpenTeamDialog(volunteer)}
-                          className="inline-flex items-center rounded-lg border border-brand-200 px-3 py-1.5 text-theme-xs font-medium text-brand-600 hover:bg-brand-50 dark:border-brand-500/30 dark:text-brand-400 dark:hover:bg-brand-500/10"
-                        >
-                          Xem danh sách đội nhóm
-                        </button>
-                      )}
+                    <TableCell className="px-4 py-3 text-gray-500 text-start text-theme-sm dark:text-gray-400">
+                      {volunteer.kyNang}
+                    </TableCell>
+                    <TableCell className="px-4 py-3 text-gray-500 text-start text-theme-sm dark:text-gray-400">
+                      {volunteer.ghiChu}
                     </TableCell>
 
                     <TableCell className="px-4 py-3">
@@ -192,16 +247,17 @@ export default function DuyetTinhNguyenVien({
                           onClick={() => handleApprove(volunteer)}
                           className="inline-flex items-center gap-1 rounded-lg bg-brand-500 px-3 py-2 text-theme-xs font-medium text-white hover:bg-brand-600 disabled:cursor-not-allowed disabled:bg-brand-300"
                           aria-label={`Chấp nhận ${volunteer.ten}`}
-                          disabled={!selectedTeam}
+                          disabled={isMutating}
                         >
                           <CheckLineIcon className="size-4" />
-                          Chấp nhận
+                          {isMutating ? "Đang xử lý..." : "Chấp nhận"}
                         </button>
                         <button
                           type="button"
                           onClick={() => handleDelete(volunteer)}
-                          className="inline-flex items-center gap-1 rounded-lg border border-error-200 px-3 py-2 text-theme-xs font-medium text-error-600 hover:bg-error-50 dark:border-error-500/30 dark:text-error-400 dark:hover:bg-error-500/10"
-                          aria-label={`Xoa ${volunteer.ten}`}
+                          className="inline-flex items-center gap-1 rounded-lg border border-error-200 px-3 py-2 text-theme-xs font-medium text-error-600 hover:bg-error-50 disabled:cursor-not-allowed disabled:opacity-70 dark:border-error-500/30 dark:text-error-400 dark:hover:bg-error-500/10"
+                          aria-label={`Xóa ${volunteer.ten}`}
+                          disabled={isMutating}
                         >
                           <TrashBinIcon className="size-4" />
                           Xóa
@@ -212,13 +268,13 @@ export default function DuyetTinhNguyenVien({
                 );
               })}
 
-              {volunteers.length === 0 && (
+              {!isLoading && volunteers.length === 0 && (
                 <TableRow>
                   <td
                     className="px-5 py-10 text-center text-gray-500 text-theme-sm dark:text-gray-400"
-                    colSpan={4}
+                    colSpan={5}
                   >
-                    Chưa có tình nguyện viên nào trong danh sách.
+                    Không có tình nguyện viên nào đang chờ duyệt.
                   </td>
                 </TableRow>
               )}
@@ -226,92 +282,6 @@ export default function DuyetTinhNguyenVien({
           </Table>
         </div>
       </div>
-
-      <Modal
-        isOpen={isTeamDialogOpen}
-        onClose={handleCloseTeamDialog}
-        className="max-w-[760px] m-4"
-      >
-        <div className="p-6 sm:p-7">
-          <h3 className="text-lg font-semibold text-gray-800 dark:text-white/90">
-            Chọn đội nhóm
-          </h3>
-          <p className="mt-1 text-theme-sm text-gray-500 dark:text-gray-400">
-            Chọn một đội để điều hướng tình nguyện viên sau khi duyệt.
-          </p>
-
-          {selectedVolunteer && (
-            <div className="mt-4 rounded-xl border border-gray-200 bg-gray-50 p-4 dark:border-white/[0.08] dark:bg-white/[0.03]">
-              <p className="font-medium text-gray-800 text-theme-sm dark:text-white/90">
-                {selectedVolunteer.ten}
-              </p>
-              <p className="mt-1 text-theme-xs text-gray-500 dark:text-gray-400">
-                SĐT: {selectedVolunteer.soDienThoai}
-              </p>
-              <p className="text-theme-xs text-gray-500 dark:text-gray-400">
-                Email: {selectedVolunteer.email}
-              </p>
-              <p className="text-theme-xs text-gray-500 dark:text-gray-400">
-                Địa chỉ: {selectedVolunteer.diaChi}
-              </p>
-            </div>
-          )}
-
-          <div className="mt-4 max-h-[420px] overflow-y-auto pr-1 custom-scrollbar">
-            <div className="grid gap-3 sm:grid-cols-2">
-              {teamOptions.map((team) => {
-                const currentSelectedTeamId = selectedVolunteer
-                  ? selectedTeamIdByVolunteerId[selectedVolunteer.id]
-                  : undefined;
-                const isCurrentTeam = currentSelectedTeamId === team.id;
-
-                return (
-                  <div
-                    key={team.id}
-                    className={`rounded-xl border p-4 ${
-                      isCurrentTeam
-                        ? "border-brand-300 bg-brand-50/70 dark:border-brand-500/40 dark:bg-brand-500/10"
-                        : "border-gray-200 bg-white dark:border-white/[0.08] dark:bg-white/[0.02]"
-                    }`}
-                  >
-                    <p className="font-medium text-gray-800 text-theme-sm dark:text-white/90">
-                      {team.tenDoiNhom}
-                    </p>
-                    <p className="mt-1 text-theme-xs text-gray-500 dark:text-gray-400">
-                      SĐT: {team.soDienThoai}
-                    </p>
-                    <p className="text-theme-xs text-gray-500 dark:text-gray-400">
-                      Địa chỉ: {team.diaChi}
-                    </p>
-                    <span
-                      className={`mt-2 inline-flex rounded-full border px-2.5 py-1 text-theme-xs font-medium ${
-                        team.dangHoatDong
-                          ? "border-success-300 bg-success-50 text-success-700 dark:border-success-500/30 dark:bg-success-500/15 dark:text-success-400"
-                          : "border-gray-300 bg-gray-50 text-gray-600 dark:border-gray-600 dark:bg-gray-700/40 dark:text-gray-300"
-                      }`}
-                    >
-                      {team.dangHoatDong ? "Đang hoạt động" : "Tạm ngưng"}
-                    </span>
-                    <button
-                      type="button"
-                      onClick={() => handleSelectTeam(team.id)}
-                      className={`mt-3 inline-flex w-full items-center justify-center rounded-lg px-3 py-2 text-theme-xs font-medium ${
-                        isCurrentTeam
-                          ? "bg-brand-100 text-brand-700 dark:bg-brand-500/20 dark:text-brand-300"
-                          : "bg-brand-500 text-white hover:bg-brand-600"
-                      }`}
-                    >
-                      {isCurrentTeam ? "Đang chọn" : "Chọn đội này"}
-                    </button>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        </div>
-      </Modal>
     </>
   );
 }
-
-

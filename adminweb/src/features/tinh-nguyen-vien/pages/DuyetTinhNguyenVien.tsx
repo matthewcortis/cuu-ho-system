@@ -7,16 +7,15 @@ export default function DuyetTinhNguyenVienPage() {
   return (
     <>
       <PageMeta
-        title="Duyệt Tình Nguyện Viên"
-        description="Trang quản lý tình nguyện viên, hiển thị danh sách các tình nguyện viên và thông tin liên quan."
+        title="Duyệt tình nguyện viên"
+        description="Trang hiển thị danh sách tình nguyện viên đang chờ xét duyệt."
       />
-      <PageBreadcrumb pageTitle="Duyệt Tình Nguyện Viên" />
+      <PageBreadcrumb pageTitle="Duyệt tình nguyện viên" />
       <div className="space-y-6">
-        <ComponentCard title="Danh sách tình nguyện viên">
+        <ComponentCard title="Danh sách tình nguyện viên chờ duyệt">
           <DuyetTinhNguyenVien />
         </ComponentCard>
       </div>
     </>
   );
 }
-
