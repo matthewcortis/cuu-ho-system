@@ -48,6 +48,12 @@ export interface DoiNhomCreateRequest {
   doiTruongTinhNguyenVienId: number;
 }
 
+export type DoiNhomUpdateRequest = DoiNhomCreateRequest;
+
+export interface DoiNhomCapNhatActiveRequest {
+  active: boolean;
+}
+
 interface NguoiDungLiteDto {
   ten: string;
   sdt: string;
@@ -334,6 +340,50 @@ export async function createDoiNhom(request: DoiNhomCreateRequest): Promise<DoiN
   const parsedItem = parseDoiNhomDto(envelope.data);
   if (!parsedItem) {
     throw new DoiNhomApiError("Backend không trả về đội nhóm vừa tạo", envelope.status);
+  }
+
+  return parsedItem;
+}
+
+export async function updateDoiNhom(
+  id: number,
+  request: DoiNhomUpdateRequest
+): Promise<DoiNhomDto> {
+  const authorization = getAuthHeaderOrThrow();
+  const envelope = await requestEnvelope<unknown>(`/doi-nhom/${id}`, {
+    method: "PUT",
+    headers: {
+      Authorization: authorization,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(request),
+  });
+
+  const parsedItem = parseDoiNhomDto(envelope.data);
+  if (!parsedItem) {
+    throw new DoiNhomApiError("Backend khong tra ve doi nhom sau cap nhat", envelope.status);
+  }
+
+  return parsedItem;
+}
+
+export async function updateDoiNhomActive(
+  id: number,
+  request: DoiNhomCapNhatActiveRequest
+): Promise<DoiNhomDto> {
+  const authorization = getAuthHeaderOrThrow();
+  const envelope = await requestEnvelope<unknown>(`/doi-nhom/${id}/active`, {
+    method: "PUT",
+    headers: {
+      Authorization: authorization,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(request),
+  });
+
+  const parsedItem = parseDoiNhomDto(envelope.data);
+  if (!parsedItem) {
+    throw new DoiNhomApiError("Backend khong tra ve doi nhom sau cap nhat active", envelope.status);
   }
 
   return parsedItem;

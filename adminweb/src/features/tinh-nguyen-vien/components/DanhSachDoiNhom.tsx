@@ -15,6 +15,7 @@ import {
 import Badge from "@/components/ui/badge/Badge";
 
 export interface TeamMember {
+  tinhNguyenVienId?: number;
   ten: string;
   avatarUrl: string;
   vaiTro: VaiTroDoiNhom;
@@ -23,10 +24,12 @@ export interface TeamMember {
 export interface TeamTableRow {
   id: number;
   tenDoiNhom: string;
+  soDienThoai: string;
   diaChi: string;
   doiTruong: TeamMember;
   thanhVien: TeamMember[];
   trangThaiHoatDong: boolean;
+  active: boolean;
 }
 
 interface DanhSachDoiNhomProps {
@@ -34,6 +37,8 @@ interface DanhSachDoiNhomProps {
   extraTeams?: TeamTableRow[];
   onEditTeam?: (team: TeamTableRow) => void;
   onDeleteTeam?: (team: TeamTableRow) => void;
+  onChangeTeamActive?: (team: TeamTableRow, active: boolean) => void;
+  updatingActiveTeamId?: number | null;
 }
 
 function getVaiTroLabel(vaiTro: VaiTroDoiNhom): string {
@@ -57,6 +62,7 @@ function createMemberFromMapping(
   if (!nguoiDung || !nguoiDung.ten) return null;
 
   return {
+    tinhNguyenVienId: mapping.tinh_nguyen_vien_id ?? undefined,
     ten: nguoiDung.ten,
     avatarUrl: nguoiDung.avatar_url ?? "/images/user/user-01.jpg",
     vaiTro: mapping.vai_tro ?? "thanh_vien",
@@ -68,6 +74,8 @@ export default function DanhSachDoiNhom({
   extraTeams = [],
   onEditTeam,
   onDeleteTeam,
+  onChangeTeamActive,
+  updatingActiveTeamId = null,
 }: DanhSachDoiNhomProps) {
   const mockTeamRows = useMemo<TeamTableRow[]>(
     () =>
@@ -92,10 +100,12 @@ export default function DanhSachDoiNhom({
         return {
           id: team.id,
           tenDoiNhom: team.ten_doi_nhom,
+          soDienThoai: team.so_dien_thoai ?? "",
           diaChi: viTri?.dia_chi ?? "Chua cap nhat",
           doiTruong,
           thanhVien,
           trangThaiHoatDong: Boolean(team.trang_thai_hoat_dong),
+          active: Boolean(team.active),
         };
       }),
     []
@@ -118,6 +128,8 @@ export default function DanhSachDoiNhom({
 
   const handleEdit = (team: TeamTableRow) => onEditTeam?.(team);
   const handleDelete = (team: TeamTableRow) => onDeleteTeam?.(team);
+  const handleChangeActive = (team: TeamTableRow, active: boolean) =>
+    onChangeTeamActive?.(team, active);
 
   return (
     <div className="overflow-hidden rounded-xl border border-gray-200 bg-white dark:border-white/[0.05] dark:bg-white/[0.03]">
@@ -165,7 +177,11 @@ export default function DanhSachDoiNhom({
           </TableHeader>
 
           <TableBody className="divide-y divide-gray-100 dark:divide-white/[0.05]">
-            {teamRows.map((team) => (
+            {teamRows.map((team) => {
+              const isActive = Boolean(team.active && team.trangThaiHoatDong);
+              const isUpdatingActive = updatingActiveTeamId === team.id;
+
+              return (
               <TableRow key={team.id}>
                 <TableCell className="px-5 py-4 sm:px-6 text-start">
                   <div className="flex items-center gap-3">
@@ -230,36 +246,64 @@ export default function DanhSachDoiNhom({
                 </TableCell>
 
                 <TableCell className="px-4 py-3 text-start text-theme-sm dark:text-gray-400">
-                  <Badge
-                    size="sm"
-                    color={team.trangThaiHoatDong ? "success" : "error"}
-                  >
-                    {team.trangThaiHoatDong ? "Dang hoat dong" : "Tam ngung"}
-                  </Badge>
+                  {onChangeTeamActive ? (
+                    <div className="inline-flex min-w-[160px] flex-col gap-1">
+                      <select
+                        value={isActive ? "active" : "inactive"}
+                        disabled={isUpdatingActive}
+                        onChange={(event) => {
+                          const nextActive = event.target.value === "active";
+                          if (nextActive === isActive) {
+                            return;
+                          }
+                          handleChangeActive(team, nextActive);
+                        }}
+                        className="h-9 w-full rounded-lg border border-gray-300 bg-white px-3 text-xs text-gray-700 shadow-theme-xs focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 disabled:cursor-not-allowed disabled:opacity-70 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90"
+                      >
+                        <option value="active">Dang hoat dong</option>
+                        <option value="inactive">Tam ngung</option>
+                      </select>
+                      {isUpdatingActive && (
+                        <span className="text-xs text-gray-500 dark:text-gray-400">
+                          Dang cap nhat...
+                        </span>
+                      )}
+                    </div>
+                  ) : (
+                    <Badge size="sm" color={isActive ? "success" : "error"}>
+                      {isActive ? "Dang hoat dong" : "Tam ngung"}
+                    </Badge>
+                  )}
                 </TableCell>
 
                 <TableCell className="px-4 py-3">
                   <div className="flex items-center justify-center gap-2">
-                    <button
-                      type="button"
-                      onClick={() => handleEdit(team)}
-                      className="inline-flex items-center justify-center w-8 h-8 text-gray-600 border border-gray-200 rounded-lg hover:bg-gray-100 hover:text-gray-800 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-white/10 dark:hover:text-white"
-                      aria-label={`Sua ${team.tenDoiNhom}`}
-                    >
-                      <PencilIcon className="size-4" />
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => handleDelete(team)}
-                      className="inline-flex items-center justify-center w-8 h-8 text-error-600 border border-error-200 rounded-lg hover:bg-error-50 dark:border-error-500/30 dark:text-error-400 dark:hover:bg-error-500/10"
-                      aria-label={`Xoa ${team.tenDoiNhom}`}
-                    >
-                      <TrashBinIcon className="size-4" />
-                    </button>
+                    {onEditTeam && (
+                      <button
+                        type="button"
+                        onClick={() => handleEdit(team)}
+                        className="inline-flex items-center justify-center w-8 h-8 text-gray-600 border border-gray-200 rounded-lg hover:bg-gray-100 hover:text-gray-800 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-white/10 dark:hover:text-white"
+                        aria-label={`Sua ${team.tenDoiNhom}`}
+                      >
+                        <PencilIcon className="size-4" />
+                      </button>
+                    )}
+
+                    {onDeleteTeam && (
+                      <button
+                        type="button"
+                        onClick={() => handleDelete(team)}
+                        className="inline-flex items-center justify-center w-8 h-8 text-error-600 border border-error-200 rounded-lg hover:bg-error-50 dark:border-error-500/30 dark:text-error-400 dark:hover:bg-error-500/10"
+                        aria-label={`Xoa ${team.tenDoiNhom}`}
+                      >
+                        <TrashBinIcon className="size-4" />
+                      </button>
+                    )}
                   </div>
                 </TableCell>
               </TableRow>
-            ))}
+              );
+            })}
 
             {teamRows.length === 0 && (
               <TableRow>

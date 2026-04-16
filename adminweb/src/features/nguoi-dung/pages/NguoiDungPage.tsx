@@ -12,13 +12,16 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { CheckLineIcon, CloseLineIcon, EyeIcon } from "@/icons";
-import { mockDatabase } from "@/data";
+import { EyeIcon } from "@/icons";
 import { Modal } from "@/components/ui/modal";
 import { useModal } from "@/hooks/useModal";
 import {
-  fetchNguoiDungDataSource,
-  type NguoiDungDataSource,
+  fetchNguoiDungList,
+  fetchPhieuCuuTroList,
+  NguoiDungApiError,
+  updateNguoiDungTaiKhoanTrangThai,
+  type NguoiDungDto,
+  type PhieuCuuTroDto,
 } from "@/features/nguoi-dung/api/nguoiDungApi";
 
 type NguoiDungTableItem = {
@@ -44,15 +47,16 @@ type VatPhamHoTroItem = {
 
 type HoTroPhieuHistory = {
   id: number;
-  tenDoiTinhNguyen: string;
+  trangThaiPhieu: string;
   thoiGianHoTro: string;
   nguoiNhan: string;
   soDienThoai: string;
   diaChi: string;
+  ghiChu: string;
   vatPhamHoTro: VatPhamHoTroItem[];
 };
 
-type TrangThaiNguoiDungFilter = "all" | "active";
+type TrangThaiNguoiDungFilter = "all" | "active" | "inactive";
 
 const DEFAULT_AVATAR = "/images/user/user-01.jpg";
 const ROWS_PER_PAGE_OPTIONS = [20, 50, 100] as const;
@@ -60,47 +64,72 @@ const TRANG_THAI_FILTER_OPTIONS: Array<{
   value: TrangThaiNguoiDungFilter;
   label: string;
 }> = [
-    { value: "all", label: "All" },
-    { value: "active", label: "Active" },
-  ];
+  { value: "all", label: "All" },
+  { value: "active", label: "Active" },
+  { value: "inactive", label: "Inactive" },
+];
 
-const mockNguoiDungDataSource: NguoiDungDataSource = {
-  nguoi_dung: mockDatabase.nguoi_dung,
-  tai_khoan: mockDatabase.tai_khoan,
-  vi_tri: mockDatabase.vi_tri,
-  phieu_cuu_tro: mockDatabase.phieu_cuu_tro,
-  danh_sach_cuu_tro: mockDatabase.danh_sach_cuu_tro,
-  vat_pham: mockDatabase.vat_pham,
-  don_vi: mockDatabase.don_vi,
-  doi_nhom: mockDatabase.doi_nhom,
-};
+function trimOrFallback(value: string | null | undefined, fallback: string): string {
+  if (typeof value !== "string") {
+    return fallback;
+  }
 
-function buildNguoiDungTableData(dataSource: NguoiDungDataSource): NguoiDungTableItem[] {
-  return dataSource.nguoi_dung.map((nguoiDung) => {
-    const taiKhoan = dataSource.tai_khoan.find(
-      (item) => item.id === nguoiDung.tai_khoan_id
-    );
-    const viTri = dataSource.vi_tri.find((item) => item.id === nguoiDung.vi_tri_id);
-    const tongSoPhieuHoTro = dataSource.phieu_cuu_tro.filter(
-      (item) => item.nguoi_dung_id === nguoiDung.id
-    ).length;
+  const normalized = value.trim();
+  return normalized.length > 0 ? normalized : fallback;
+}
 
-    return {
+function getApiErrorMessage(error: unknown): string {
+  if (error instanceof NguoiDungApiError) {
+    return error.message;
+  }
+
+  if (error instanceof Error && error.message) {
+    return error.message;
+  }
+
+  return "Khong the xu ly du lieu nguoi dung.";
+}
+
+function buildNguoiDungTableData(
+  nguoiDungApiList: NguoiDungDto[],
+  phieuCuuTroList: PhieuCuuTroDto[]
+): NguoiDungTableItem[] {
+  const tongPhieuByNguoiDungId = phieuCuuTroList.reduce<Record<string, number>>(
+    (acc, phieu) => {
+      const nguoiGui = phieu.nguoiGui;
+
+      if (!nguoiGui || nguoiGui.type !== "NGUOI_DUNG" || !nguoiGui.userId) {
+        return acc;
+      }
+
+      acc[nguoiGui.userId] = (acc[nguoiGui.userId] ?? 0) + 1;
+      return acc;
+    },
+    {}
+  );
+
+  return nguoiDungApiList
+    .map((nguoiDung) => ({
       id: nguoiDung.id,
-      taiKhoanId: nguoiDung.tai_khoan_id,
-      ten: nguoiDung.ten ?? "Chua cap nhat",
-      soDienThoai: nguoiDung.sdt ?? "Chua cap nhat",
-      diaChi: viTri?.dia_chi ?? "Chua cap nhat",
-      trangThaiKichHoat: Boolean(taiKhoan?.trang_thai),
-      tenDangNhap: taiKhoan?.ten_dang_nhap ?? "Chua cap nhat",
-      email: taiKhoan?.email ?? "Chua cap nhat",
-      avatarUrl: nguoiDung.avatar_url ?? DEFAULT_AVATAR,
-      createdAt: nguoiDung.created_at,
+      taiKhoanId: nguoiDung.taiKhoan?.id ?? null,
+      ten: trimOrFallback(nguoiDung.ten, "Chua cap nhat"),
+      soDienThoai: trimOrFallback(nguoiDung.sdt, "Chua cap nhat"),
+      diaChi: trimOrFallback(nguoiDung.viTri?.diaChi, "Chua cap nhat"),
+      trangThaiKichHoat: Boolean(nguoiDung.taiKhoan?.trangThai),
+      tenDangNhap: trimOrFallback(nguoiDung.taiKhoan?.tenDangNhap, "Chua cap nhat"),
+      email: trimOrFallback(nguoiDung.taiKhoan?.email, "Chua cap nhat"),
+      avatarUrl: trimOrFallback(nguoiDung.avatarUrl, DEFAULT_AVATAR),
+      createdAt: nguoiDung.createdAt,
       toaDo:
-        viTri?.lat && viTri.long ? `${viTri.lat}, ${viTri.long}` : "Chua cap nhat",
-      tongSoPhieuHoTro,
-    };
-  });
+        nguoiDung.viTri?.lat && nguoiDung.viTri?.longitude
+          ? `${nguoiDung.viTri.lat}, ${nguoiDung.viTri.longitude}`
+          : "Chua cap nhat",
+      tongSoPhieuHoTro: tongPhieuByNguoiDungId[nguoiDung.id] ?? 0,
+    }))
+    .sort(
+      (left, right) =>
+        new Date(right.createdAt).getTime() - new Date(left.createdAt).getTime()
+    );
 }
 
 function formatDateTime(value: string): string {
@@ -116,93 +145,78 @@ function formatDateTime(value: string): string {
   });
 }
 
-function buildHoTroHistoryByNguoiDungId(
-  nguoiDungId: string,
-  dataSource: NguoiDungDataSource
-): HoTroPhieuHistory[] {
-  const phieuByNguoiDung = dataSource.phieu_cuu_tro
-    .filter((phieu) => phieu.nguoi_dung_id === nguoiDungId)
-    .sort(
-      (left, right) =>
-        new Date(right.created_at).getTime() - new Date(left.created_at).getTime()
-    );
+function formatPhieuTrangThai(value: string): string {
+  const normalized = value.trim();
+  if (!normalized) {
+    return "Chua cap nhat";
+  }
 
-  return phieuByNguoiDung.map((phieu, index) => {
-    const viTri = dataSource.vi_tri.find((item) => item.id === phieu.vi_tri_id);
-    const doiNhomByViTri = dataSource.doi_nhom.find(
-      (doiNhom) => doiNhom.vi_tri_id === phieu.vi_tri_id
-    );
-    const fallbackDoiNhom = dataSource.doi_nhom[index % dataSource.doi_nhom.length];
-    const doiNhom = doiNhomByViTri ?? fallbackDoiNhom;
-
-    const danhSachCuuTro = dataSource.danh_sach_cuu_tro.find(
-      (item) => item.id === phieu.danh_sach_cuu_tro_id
-    );
-    const vatPham = dataSource.vat_pham.find(
-      (item) => item.id === danhSachCuuTro?.vat_pham_id
-    );
-    const donVi = dataSource.don_vi.find((item) => item.id === vatPham?.don_vi_id);
-
-    const vatPhamHoTro: VatPhamHoTroItem[] = [];
-
-    if (vatPham?.ten_vat_pham) {
-      const soLuongLabel =
-        vatPham.so_luong !== null
-          ? `${vatPham.so_luong}${donVi?.ten ? ` ${donVi.ten}` : ""}`
-          : "Chua cap nhat";
-
-      vatPhamHoTro.push({
-        tenVatPham: vatPham.ten_vat_pham,
-        soLuong: soLuongLabel,
-        ghiChu: danhSachCuuTro?.ten ?? "Goi ho tro tu phieu",
-      });
-    } else if (danhSachCuuTro?.ten) {
-      vatPhamHoTro.push({
-        tenVatPham: danhSachCuuTro.ten,
-        soLuong: "Chua cap nhat",
-        ghiChu: "Thong tin vat pham tong hop",
-      });
-    }
-
-    return {
-      id: phieu.id,
-      tenDoiTinhNguyen: doiNhom?.ten_doi_nhom ?? "Chua phan cong doi tinh nguyen",
-      thoiGianHoTro: phieu.created_at,
-      nguoiNhan: phieu.ho_ten ?? selectedNguoiDungNameFallback(nguoiDungId, dataSource),
-      soDienThoai: phieu.sdt ?? "Chua cap nhat",
-      diaChi: viTri?.dia_chi ?? "Chua cap nhat",
-      vatPhamHoTro:
-        vatPhamHoTro.length > 0
-          ? vatPhamHoTro
-          : [
-            {
-              tenVatPham: "Chua co thong tin vat pham",
-              soLuong: "Chua cap nhat",
-              ghiChu: "Khong tim thay chi tiet vat pham cho phieu nay",
-            },
-          ],
-    };
-  });
+  return normalized
+    .split("_")
+    .map((part) => {
+      const lower = part.toLowerCase();
+      return `${lower.slice(0, 1).toUpperCase()}${lower.slice(1)}`;
+    })
+    .join(" ");
 }
 
-function selectedNguoiDungNameFallback(
+function buildHoTroHistoryByNguoiDungId(
   nguoiDungId: string,
-  dataSource: NguoiDungDataSource
-): string {
-  const nguoiDung = dataSource.nguoi_dung.find((item) => item.id === nguoiDungId);
-  return nguoiDung?.ten ?? "Chua cap nhat";
+  fallbackNguoiNhan: string,
+  phieuCuuTroList: PhieuCuuTroDto[]
+): HoTroPhieuHistory[] {
+  return phieuCuuTroList
+    .filter(
+      (phieu) =>
+        phieu.nguoiGui?.type === "NGUOI_DUNG" && phieu.nguoiGui.userId === nguoiDungId
+    )
+    .sort(
+      (left, right) =>
+        new Date(right.createdAt).getTime() - new Date(left.createdAt).getTime()
+    )
+    .map((phieu) => {
+      const vatPhamHoTro =
+        phieu.chiTietCuuTro.length > 0
+          ? phieu.chiTietCuuTro.map((item) => ({
+              tenVatPham: trimOrFallback(item.tenVatPham, "Chua co ten vat pham"),
+              soLuong:
+                item.soLuong === null || item.soLuong === undefined
+                  ? "Chua cap nhat"
+                  : String(item.soLuong),
+              ghiChu: trimOrFallback(item.ghiChu, "Khong co ghi chu"),
+            }))
+          : [
+              {
+                tenVatPham: "Chua co thong tin vat pham",
+                soLuong: "Chua cap nhat",
+                ghiChu: "Phieu chua co danh sach chi tiet cuu tro",
+              },
+            ];
+
+      return {
+        id: phieu.id,
+        trangThaiPhieu: formatPhieuTrangThai(phieu.trangThai),
+        thoiGianHoTro: phieu.createdAt,
+        nguoiNhan: trimOrFallback(phieu.nguoiGui?.ten, fallbackNguoiNhan),
+        soDienThoai: trimOrFallback(phieu.nguoiGui?.sdt, "Chua cap nhat"),
+        diaChi: trimOrFallback(phieu.viTri?.diaChi, "Chua cap nhat"),
+        ghiChu: trimOrFallback(phieu.ghiChu, "Khong co ghi chu"),
+        vatPhamHoTro,
+      };
+    });
 }
 
 export default function NguoiDungPage() {
-  const [dataSource, setDataSource] = useState<NguoiDungDataSource>(
-    mockNguoiDungDataSource
-  );
+  const [nguoiDungApiList, setNguoiDungApiList] = useState<NguoiDungDto[]>([]);
+  const [phieuCuuTroList, setPhieuCuuTroList] = useState<PhieuCuuTroDto[]>([]);
   const [isNguoiDungLoading, setIsNguoiDungLoading] = useState<boolean>(false);
   const [nguoiDungApiError, setNguoiDungApiError] = useState<string | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
   const nguoiDungList = useMemo(
-    () => buildNguoiDungTableData(dataSource),
-    [dataSource]
+    () => buildNguoiDungTableData(nguoiDungApiList, phieuCuuTroList),
+    [nguoiDungApiList, phieuCuuTroList]
   );
   const {
     isOpen: isUserDetailDialogOpen,
@@ -214,6 +228,8 @@ export default function NguoiDungPage() {
   const [trangThaiByNguoiDungId, setTrangThaiByNguoiDungId] = useState<
     Record<string, boolean>
   >({});
+  const [isUpdatingTrangThaiByNguoiDungId, setIsUpdatingTrangThaiByNguoiDungId] =
+    useState<Record<string, boolean>>({});
   const [isHoTroListOpen, setIsHoTroListOpen] = useState<boolean>(false);
   const [expandedPhieuIds, setExpandedPhieuIds] = useState<Record<number, boolean>>({});
   const [trangThaiFilter, setTrangThaiFilter] =
@@ -228,33 +244,30 @@ export default function NguoiDungPage() {
     const loadNguoiDungData = async () => {
       setIsNguoiDungLoading(true);
       setNguoiDungApiError(null);
+      setActionError(null);
+      setSuccessMessage(null);
 
       try {
-        const remoteData = await fetchNguoiDungDataSource();
+        const [nguoiDungResult, phieuResult] = await Promise.all([
+          fetchNguoiDungList(),
+          fetchPhieuCuuTroList(),
+        ]);
 
         if (!isMounted) {
           return;
         }
 
-        setDataSource({
-          ...remoteData,
-          doi_nhom:
-            remoteData.doi_nhom.length > 0
-              ? remoteData.doi_nhom
-              : mockNguoiDungDataSource.doi_nhom,
-        });
+        setNguoiDungApiList(nguoiDungResult);
+        setPhieuCuuTroList(phieuResult);
       } catch (error) {
         if (!isMounted) {
           return;
         }
 
-        const errorMessage =
-          error instanceof Error
-            ? error.message
-            : "Không thể tải dữ liệu người dụng.";
 
-        setNguoiDungApiError(errorMessage);
-        setDataSource(mockNguoiDungDataSource);
+        setNguoiDungApiError(getApiErrorMessage(error));
+        setNguoiDungApiList([]);
+        setPhieuCuuTroList([]);
       } finally {
         if (isMounted) {
           setIsNguoiDungLoading(false);
@@ -262,7 +275,7 @@ export default function NguoiDungPage() {
       }
     };
 
-    loadNguoiDungData();
+    void loadNguoiDungData();
 
     return () => {
       isMounted = false;
@@ -299,9 +312,13 @@ export default function NguoiDungPage() {
   const selectedNguoiDungHoTroList = useMemo(
     () =>
       selectedNguoiDung
-        ? buildHoTroHistoryByNguoiDungId(selectedNguoiDung.id, dataSource)
+        ? buildHoTroHistoryByNguoiDungId(
+            selectedNguoiDung.id,
+            selectedNguoiDung.ten,
+            phieuCuuTroList
+          )
         : ([] as HoTroPhieuHistory[]),
-    [selectedNguoiDung, dataSource]
+    [selectedNguoiDung, phieuCuuTroList]
   );
 
   const getTrangThai = (nguoiDungId: string, defaultValue: boolean) =>
@@ -314,7 +331,9 @@ export default function NguoiDungPage() {
       const isActivated =
         trangThaiByNguoiDungId[nguoiDung.id] ?? nguoiDung.trangThaiKichHoat;
       const matchesTrangThai =
-        trangThaiFilter === "all" || (trangThaiFilter === "active" && isActivated);
+        trangThaiFilter === "all" ||
+        (trangThaiFilter === "active" && isActivated) ||
+        (trangThaiFilter === "inactive" && !isActivated);
       const matchesDiaChi =
         normalizedDiaChi.length === 0 ||
         nguoiDung.diaChi.toLowerCase().includes(normalizedDiaChi);
@@ -363,15 +382,59 @@ export default function NguoiDungPage() {
     setCurrentPage((prev) => Math.min(prev, totalPages));
   }, [totalPages]);
 
-  const handleToggleActivation = (nguoiDungId: string) => {
-    setTrangThaiByNguoiDungId((prev) => {
-      const currentValue = prev[nguoiDungId] ?? false;
+  const handleChangeActivation = async (
+    nguoiDung: NguoiDungTableItem,
+    nextTrangThai: boolean
+  ) => {
+    const currentTrangThai = getTrangThai(nguoiDung.id, nguoiDung.trangThaiKichHoat);
+    if (currentTrangThai === nextTrangThai) {
+      return;
+    }
 
-      return {
+    if (isUpdatingTrangThaiByNguoiDungId[nguoiDung.id]) {
+      return;
+    }
+
+    setActionError(null);
+    setSuccessMessage(null);
+    setIsUpdatingTrangThaiByNguoiDungId((prev) => ({
+      ...prev,
+      [nguoiDung.id]: true,
+    }));
+    setTrangThaiByNguoiDungId((prev) => ({
+      ...prev,
+      [nguoiDung.id]: nextTrangThai,
+    }));
+
+    try {
+      const updatedNguoiDung = await updateNguoiDungTaiKhoanTrangThai(
+        nguoiDung.id,
+        nextTrangThai
+      );
+      setNguoiDungApiList((prev) =>
+        prev.map((item) => (item.id === updatedNguoiDung.id ? updatedNguoiDung : item))
+      );
+      setTrangThaiByNguoiDungId((prev) => ({
         ...prev,
-        [nguoiDungId]: !currentValue,
-      };
-    });
+        [updatedNguoiDung.id]: Boolean(updatedNguoiDung.taiKhoan?.trangThai),
+      }));
+      setSuccessMessage(
+        nextTrangThai
+          ? `Da kich hoat tai khoan ${nguoiDung.ten}.`
+          : `Da tam khoa tai khoan ${nguoiDung.ten}.`
+      );
+    } catch (error) {
+      setTrangThaiByNguoiDungId((prev) => ({
+        ...prev,
+        [nguoiDung.id]: currentTrangThai,
+      }));
+      setActionError(getApiErrorMessage(error));
+    } finally {
+      setIsUpdatingTrangThaiByNguoiDungId((prev) => ({
+        ...prev,
+        [nguoiDung.id]: false,
+      }));
+    }
   };
 
   const handleOpenUserDetailDialog = (nguoiDungId: string) => {
@@ -397,25 +460,37 @@ export default function NguoiDungPage() {
   return (
     <>
       <PageMeta
-        title="Người dùng"
-        description="Trang quan ly nguoi dung: danh sach, trang thai kich hoat va chi tiet thong tin."
+        title="Nguoi dung"
+        description="Trang quan ly nguoi dung: danh sach, trang thai tai khoan active va lich su tao phieu cuu tro."
       />
-      <PageBreadCrumb pageTitle="Người dùng" />
+      <PageBreadCrumb pageTitle="Nguoi dung" />
 
       <div className="space-y-6">
+        {actionError && (
+          <div className="rounded-lg border border-error-200 bg-error-50 px-4 py-3 text-theme-sm text-error-700 dark:border-error-500/30 dark:bg-error-500/10 dark:text-error-300">
+            {actionError}
+          </div>
+        )}
+
+        {successMessage && (
+          <div className="rounded-lg border border-success-200 bg-success-50 px-4 py-3 text-theme-sm text-success-700 dark:border-success-500/30 dark:bg-success-500/10 dark:text-success-300">
+            {successMessage}
+          </div>
+        )}
+
         <ComponentCard
-          title="Danh sách người dùng"
-          desc="Nhấn vào để xem chi tiết."
+          title="Danh sach nguoi dung"
+          desc="Nhan vao tung dong de xem thong tin chi tiet va lich su tao phieu cuu tro."
         >
           {isNguoiDungLoading && (
             <div className="rounded-lg border border-brand-200 bg-brand-50 px-4 py-3 text-theme-sm text-brand-700 dark:border-brand-500/30 dark:bg-brand-500/10 dark:text-brand-300">
-              Dang tai du lieu nguoi dung tu Supabase...
+              Dang tai du lieu nguoi dung va phieu cuu tro tu backend...
             </div>
           )}
 
           {nguoiDungApiError && (
             <div className="rounded-lg border border-warning-200 bg-warning-50 px-4 py-3 text-theme-sm text-warning-700 dark:border-warning-500/30 dark:bg-warning-500/10 dark:text-warning-300">
-              Khong the lay du lieu API: {nguoiDungApiError}. Dang dung du lieu mock.
+              Khong the tai day du du lieu API: {nguoiDungApiError}
             </div>
           )}
 
@@ -556,9 +631,27 @@ export default function NguoiDungPage() {
                         </TableCell>
 
                         <TableCell className="px-4 py-3 text-start text-theme-sm dark:text-gray-400">
-                          <Badge size="sm" color={isActivated ? "success" : "error"}>
-                            {isActivated ? "Da kich hoat" : "Da khoa"}
-                          </Badge>
+                          <div className="inline-flex min-w-[160px] flex-col gap-1">
+                            <select
+                              value={isActivated ? "active" : "inactive"}
+                              disabled={Boolean(isUpdatingTrangThaiByNguoiDungId[nguoiDung.id])}
+                              onClick={(event) => event.stopPropagation()}
+                              onChange={(event) => {
+                                event.stopPropagation();
+                                const nextTrangThai = event.target.value === "active";
+                                void handleChangeActivation(nguoiDung, nextTrangThai);
+                              }}
+                              className="h-9 w-full rounded-lg border border-gray-300 bg-white px-3 text-xs text-gray-700 shadow-theme-xs focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 disabled:cursor-not-allowed disabled:opacity-70 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90"
+                            >
+                              <option value="active">Dang hoat dong</option>
+                              <option value="inactive">Tam khoa</option>
+                            </select>
+                            {isUpdatingTrangThaiByNguoiDungId[nguoiDung.id] && (
+                              <span className="text-xs text-gray-500 dark:text-gray-400">
+                                Dang cap nhat...
+                              </span>
+                            )}
+                          </div>
                         </TableCell>
 
                         <TableCell className="px-4 py-3">
@@ -573,28 +666,6 @@ export default function NguoiDungPage() {
                               aria-label={`Xem chi tiet ${nguoiDung.ten}`}
                             >
                               <EyeIcon className="size-4" />
-                            </button>
-                            <button
-                              type="button"
-                              onClick={(event) => {
-                                event.stopPropagation();
-                                handleToggleActivation(nguoiDung.id);
-                              }}
-                              className={`inline-flex items-center justify-center w-8 h-8 rounded-lg border ${isActivated
-                                  ? "text-error-600 border-error-200 hover:bg-error-50 dark:border-error-500/30 dark:text-error-400 dark:hover:bg-error-500/10"
-                                  : "text-success-600 border-success-200 hover:bg-success-50 dark:border-success-500/30 dark:text-success-400 dark:hover:bg-success-500/10"
-                                }`}
-                              aria-label={
-                                isActivated
-                                  ? `Khoa tai khoan ${nguoiDung.ten}`
-                                  : `Kich hoat tai khoan ${nguoiDung.ten}`
-                              }
-                            >
-                              {isActivated ? (
-                                <CloseLineIcon className="size-4" />
-                              ) : (
-                                <CheckLineIcon className="size-4" />
-                              )}
                             </button>
                           </div>
                         </TableCell>
@@ -787,7 +858,7 @@ export default function NguoiDungPage() {
                       {selectedNguoiDung.tongSoPhieuHoTro}
                     </p>
                     <p className="mt-1 text-theme-xs text-brand-600 dark:text-brand-400">
-                      Nhấn vào để xem danh sách hỗ trợ theo đội tình nguyện
+                      Nhan vao de xem lich su tao phieu cuu tro
                     </p>
                   </div>
                   <span
@@ -804,7 +875,7 @@ export default function NguoiDungPage() {
                   <div className="mt-4 space-y-3 border-t border-gray-100 pt-4 dark:border-white/[0.06]">
                     {selectedNguoiDungHoTroList.length === 0 ? (
                       <div className="rounded-lg border border-dashed border-gray-300 p-4 text-theme-sm text-gray-500 dark:border-gray-700 dark:text-gray-400">
-                        Chưa có phiếu hỗ trợ nào
+                        Chua co lich su tao phieu cuu tro
                       </div>
                     ) : (
                       selectedNguoiDungHoTroList.map((phieuHoTro) => {
@@ -822,10 +893,13 @@ export default function NguoiDungPage() {
                             >
                               <div>
                                 <p className="text-theme-sm font-medium text-gray-800 dark:text-white/90">
-                                  {phieuHoTro.tenDoiTinhNguyen}
+                                  Phieu #{phieuHoTro.id}
                                 </p>
                                 <p className="text-theme-xs text-gray-500 dark:text-gray-400">
                                   {formatDateTime(phieuHoTro.thoiGianHoTro)}
+                                </p>
+                                <p className="text-theme-xs text-gray-500 dark:text-gray-400">
+                                  Trang thai: {phieuHoTro.trangThaiPhieu}
                                 </p>
                               </div>
                               <span className="text-theme-xs font-medium text-brand-600 dark:text-brand-400">
@@ -851,15 +925,22 @@ export default function NguoiDungPage() {
                                 </div>
 
                                 <p className="text-theme-xs text-gray-500 dark:text-gray-400">
-                                 Địa chỉ hỗ trợ:{" "}
+                                  Dia chi ho tro:{" "}
                                   <span className="font-medium text-gray-800 dark:text-white/90">
                                     {phieuHoTro.diaChi}
                                   </span>
                                 </p>
 
+                                <p className="text-theme-xs text-gray-500 dark:text-gray-400">
+                                  Ghi chu:{" "}
+                                  <span className="font-medium text-gray-800 dark:text-white/90">
+                                    {phieuHoTro.ghiChu}
+                                  </span>
+                                </p>
+
                                 <div>
                                   <p className="mb-2 text-theme-xs font-medium text-gray-700 dark:text-gray-300">
-                                    Vật phẩm đã hỗ trợ
+                                    Vat pham can cuu tro
                                   </p>
                                   <div className="space-y-2">
                                     {phieuHoTro.vatPhamHoTro.map((vatPham, index) => (
@@ -900,4 +981,5 @@ export default function NguoiDungPage() {
     </>
   );
 }
+
 

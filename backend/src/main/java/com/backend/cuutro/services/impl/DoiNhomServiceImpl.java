@@ -4,6 +4,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 import org.springframework.stereotype.Service;
@@ -11,7 +12,9 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
 import com.backend.cuutro.constant.enums.TrangThaiDuyetTinhNguyenVien;
+import com.backend.cuutro.dto.request.DoiNhomCapNhatRequest;
 import com.backend.cuutro.dto.request.DoiNhomTaoRequest;
+import com.backend.cuutro.dto.request.ViTriInputRequest;
 import com.backend.cuutro.dto.response.entities.DoiNhomDto;
 import com.backend.cuutro.dto.response.entities.DoiNhomThanhVienDto;
 import com.backend.cuutro.entities.DoiNhomEntity;
@@ -88,15 +91,7 @@ public class DoiNhomServiceImpl implements DoiNhomService {
 	@Transactional
 	public DoiNhomDto taoDoiNhom(DoiNhomTaoRequest request) {
 		TinhNguyenVienEntity doiTruong = getTinhNguyenVienOrThrow(request.getDoiTruongTinhNguyenVienId());
-		if (!TrangThaiDuyetTinhNguyenVien.DUOC_DUYET.name().equals(doiTruong.getTrangThaiDuyet())) {
-			throw new InvalidFieldException("Chi tinh nguyen vien DUOC_DUYET moi duoc lam doi truong");
-		}
-		if (doiNhomTinhNguyenVienRepository.existsByTinhNguyenVien_IdAndVaiTro(doiTruong.getId(), "truong_nhom")) {
-			throw new InvalidFieldException("Nguoi duoc chon da la doi truong cua doi khac");
-		}
-		if (doiNhomTinhNguyenVienRepository.countByTinhNguyenVien_Id(doiTruong.getId()) >= 3) {
-			throw new InvalidFieldException("Mot tinh nguyen vien chi duoc tham gia toi da 3 doi nhom");
-		}
+		validateDoiTruongCoTheLamTruongNhom(null, doiTruong);
 
 		ViTriEntity viTri = viTriCommandService.taoViTriMoi(request.getViTri());
 
@@ -123,9 +118,147 @@ public class DoiNhomServiceImpl implements DoiNhomService {
 		return dto;
 	}
 
+	@Override
+	@Transactional
+	public DoiNhomDto capNhatDoiNhom(Long id, DoiNhomCapNhatRequest request) {
+		DoiNhomEntity doiNhom = getDoiNhomOrThrow(id);
+		TinhNguyenVienEntity doiTruongMoi = getTinhNguyenVienOrThrow(request.getDoiTruongTinhNguyenVienId());
+		validateDoiTruongCoTheLamTruongNhom(id, doiTruongMoi);
+
+		capNhatThongTinDoiNhom(doiNhom, request);
+		capNhatVaiTroDoiTruong(doiNhom, doiTruongMoi);
+
+		DoiNhomEntity updated = doiNhomRepository.save(doiNhom);
+		return toDoiNhomDtoWithThanhVien(updated);
+	}
+
+	@Override
+	@Transactional
+	public DoiNhomDto capNhatActive(Long id, Boolean active) {
+		DoiNhomEntity doiNhom = getDoiNhomOrThrow(id);
+		boolean nextActive = Boolean.TRUE.equals(active);
+		doiNhom.setActive(nextActive);
+		doiNhom.setTrangThaiHoatDong(nextActive);
+
+		DoiNhomEntity updated = doiNhomRepository.save(doiNhom);
+		return toDoiNhomDtoWithThanhVien(updated);
+	}
+
 	private TinhNguyenVienEntity getTinhNguyenVienOrThrow(Long id) {
 		return tinhNguyenVienRepository.findById(id)
 				.orElseThrow(() -> new EntityNotFoundException("TinhNguyenVien not found with id=" + id));
+	}
+
+	private DoiNhomEntity getDoiNhomOrThrow(Long id) {
+		return doiNhomRepository.findById(id)
+				.orElseThrow(() -> new EntityNotFoundException("DoiNhom not found with id=" + id));
+	}
+
+	private void validateDoiTruongCoTheLamTruongNhom(Long doiNhomId, TinhNguyenVienEntity doiTruong) {
+		if (!TrangThaiDuyetTinhNguyenVien.DUOC_DUYET.name().equals(doiTruong.getTrangThaiDuyet())) {
+			throw new InvalidFieldException("Chi tinh nguyen vien DUOC_DUYET moi duoc lam doi truong");
+		}
+
+		boolean laDoiTruongDoiKhac = doiNhomId == null
+				? doiNhomTinhNguyenVienRepository.existsByTinhNguyenVien_IdAndVaiTro(doiTruong.getId(), "truong_nhom")
+				: doiNhomTinhNguyenVienRepository.existsByDoiNhom_IdNotAndTinhNguyenVien_IdAndVaiTro(
+						doiNhomId,
+						doiTruong.getId(),
+						"truong_nhom");
+		if (laDoiTruongDoiKhac) {
+			throw new InvalidFieldException("Nguoi duoc chon da la doi truong cua doi khac");
+		}
+
+		boolean daNamTrongDoi = doiNhomId != null
+				&& doiNhomTinhNguyenVienRepository.existsByDoiNhom_IdAndTinhNguyenVien_Id(doiNhomId, doiTruong.getId());
+		if (!daNamTrongDoi && doiNhomTinhNguyenVienRepository.countByTinhNguyenVien_Id(doiTruong.getId()) >= 3) {
+			throw new InvalidFieldException("Mot tinh nguyen vien chi duoc tham gia toi da 3 doi nhom");
+		}
+	}
+
+	private void capNhatThongTinDoiNhom(DoiNhomEntity doiNhom, DoiNhomCapNhatRequest request) {
+		doiNhom.setTenDoiNhom(request.getTenDoiNhom().trim());
+		doiNhom.setSoDienThoai(request.getSoDienThoai().trim());
+
+		ViTriInputRequest viTriRequest = request.getViTri();
+		ViTriEntity viTri = doiNhom.getViTri();
+		if (viTri == null) {
+			doiNhom.setViTri(viTriCommandService.taoViTriMoi(viTriRequest));
+			return;
+		}
+
+		viTri.setDiaChi(normalizeRequired(viTriRequest.getDiaChi(), "viTri.diaChi is required"));
+		viTri.setLat(normalizeNullable(viTriRequest.getLat()));
+		viTri.setLongitude(normalizeNullable(viTriRequest.getLongitude()));
+	}
+
+	private void capNhatVaiTroDoiTruong(DoiNhomEntity doiNhom, TinhNguyenVienEntity doiTruongMoi) {
+		if (doiNhom.getId() == null) {
+			return;
+		}
+
+		Long doiNhomId = doiNhom.getId();
+		Optional<DoiNhomTinhNguyenVienEntity> doiTruongHienTai = doiNhomTinhNguyenVienRepository
+				.findFirstByDoiNhom_IdAndVaiTro(doiNhomId, "truong_nhom");
+		Optional<DoiNhomTinhNguyenVienEntity> thanhVienMoi = doiNhomTinhNguyenVienRepository
+				.findByDoiNhom_IdAndTinhNguyenVien_Id(doiNhomId, doiTruongMoi.getId());
+
+		DoiNhomTinhNguyenVienEntity recordDoiTruongMoi = thanhVienMoi.orElseGet(() -> {
+			DoiNhomTinhNguyenVienEntity mapping = new DoiNhomTinhNguyenVienEntity();
+			mapping.setDoiNhom(doiNhom);
+			mapping.setTinhNguyenVien(doiTruongMoi);
+			return doiNhomTinhNguyenVienRepository.save(mapping);
+		});
+		recordDoiTruongMoi.setVaiTro("truong_nhom");
+
+		if (doiTruongHienTai.isPresent()) {
+			DoiNhomTinhNguyenVienEntity current = doiTruongHienTai.get();
+			Long currentLeaderId = current.getTinhNguyenVien() != null ? current.getTinhNguyenVien().getId() : null;
+			if (!Objects.equals(currentLeaderId, doiTruongMoi.getId())) {
+				current.setVaiTro("thanh_vien");
+			}
+		}
+	}
+
+	private String normalizeRequired(String value, String errorMessage) {
+		if (!StringUtils.hasText(value)) {
+			throw new InvalidFieldException(errorMessage);
+		}
+		return value.trim();
+	}
+
+	private String normalizeNullable(String value) {
+		if (!StringUtils.hasText(value)) {
+			return null;
+		}
+		return value.trim();
+	}
+
+	private DoiNhomDto toDoiNhomDtoWithThanhVien(DoiNhomEntity doiNhom) {
+		DoiNhomDto dto = doiNhomMapper.toDto(doiNhom);
+		if (doiNhom.getId() == null) {
+			dto.setThanhViens(List.of());
+			dto.setSoLuongThanhVien(0);
+			dto.setDoiTruong(null);
+			return dto;
+		}
+
+		List<DoiNhomThanhVienDto> thanhViens = doiNhomTinhNguyenVienRepository
+				.findByDoiNhom_IdInOrderByCreatedAtAsc(List.of(doiNhom.getId()))
+				.stream()
+				.map(this::toThanhVienDto)
+				.filter(Objects::nonNull)
+				.toList();
+
+		DoiNhomThanhVienDto doiTruong = thanhViens.stream()
+				.filter(item -> "truong_nhom".equalsIgnoreCase(item.getVaiTro()))
+				.findFirst()
+				.orElse(null);
+
+		dto.setThanhViens(thanhViens);
+		dto.setSoLuongThanhVien(thanhViens.size());
+		dto.setDoiTruong(doiTruong);
+		return dto;
 	}
 
 	private DoiNhomThanhVienDto toThanhVienDto(DoiNhomTinhNguyenVienEntity phanCong) {

@@ -1,6 +1,7 @@
 package com.backend.cuutro.repository;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -13,7 +14,13 @@ import com.backend.cuutro.entities.DoiNhomTinhNguyenVienEntity;
 public interface DoiNhomTinhNguyenVienRepository extends JpaRepository<DoiNhomTinhNguyenVienEntity, Long>, JpaSpecificationExecutor<DoiNhomTinhNguyenVienEntity> {
 	List<DoiNhomTinhNguyenVienEntity> findByDoiNhom_IdInOrderByCreatedAtAsc(List<Long> doiNhomIds);
 
+	Optional<DoiNhomTinhNguyenVienEntity> findFirstByDoiNhom_IdAndVaiTro(Long doiNhomId, String vaiTro);
+
+	Optional<DoiNhomTinhNguyenVienEntity> findByDoiNhom_IdAndTinhNguyenVien_Id(Long doiNhomId, Long tinhNguyenVienId);
+
 	boolean existsByDoiNhom_IdAndTinhNguyenVien_Id(Long doiNhomId, Long tinhNguyenVienId);
+
+	boolean existsByDoiNhom_IdNotAndTinhNguyenVien_IdAndVaiTro(Long doiNhomId, Long tinhNguyenVienId, String vaiTro);
 
 	long countByTinhNguyenVien_Id(Long tinhNguyenVienId);
 

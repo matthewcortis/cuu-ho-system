@@ -12,6 +12,8 @@ import {
   DoiNhomApiError,
   fetchDoiNhomList,
   fetchDoiTruongOptions,
+  updateDoiNhom,
+  updateDoiNhomActive,
   type DoiNhomCreateRequest,
   type DoiNhomDto,
   type DoiNhomThanhVienDto,
@@ -65,6 +67,7 @@ function mapThanhVienToTeamMember(
   thanhVien: DoiNhomThanhVienDto
 ): TeamTableRow["thanhVien"][number] {
   return {
+    tinhNguyenVienId: thanhVien.tinhNguyenVienId,
     ten: trimOrFallback(thanhVien.ten, `Tinh nguyen vien #${thanhVien.tinhNguyenVienId}`),
     avatarUrl: trimOrFallback(thanhVien.avatarUrl, "/images/user/user-01.jpg"),
     vaiTro: thanhVien.vaiTro,
@@ -74,6 +77,7 @@ function mapThanhVienToTeamMember(
 function mapDoiNhomDtoToTeamRow(
   team: DoiNhomDto,
   doiTruong?: {
+    tinhNguyenVienId?: number;
     ten: string;
     avatarUrl: string;
     vaiTro: "truong_nhom";
@@ -94,10 +98,12 @@ function mapDoiNhomDtoToTeamRow(
   return {
     id: team.id,
     tenDoiNhom: trimOrFallback(team.tenDoiNhom, `Doi nhom #${team.id}`),
+    soDienThoai: trimOrFallback(team.soDienThoai, "Chua cap nhat"),
     diaChi: trimOrFallback(team.viTri?.diaChi ?? "", "Chua cap nhat"),
     doiTruong: assignedLeader,
     thanhVien: mergedThanhViens,
     trangThaiHoatDong: Boolean(team.trangThaiHoatDong),
+    active: Boolean(team.active),
   };
 }
 
@@ -109,6 +115,8 @@ export default function DoiNhom() {
   const [isLoadingTeams, setIsLoadingTeams] = useState(false);
   const [isLoadingDoiTruong, setIsLoadingDoiTruong] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [editingTeamId, setEditingTeamId] = useState<number | null>(null);
+  const [updatingActiveTeamId, setUpdatingActiveTeamId] = useState<number | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
@@ -179,7 +187,7 @@ export default function DoiNhom() {
     }
   };
 
-  const buildCreateRequest = (): DoiNhomCreateRequest | null => {
+  const buildUpsertRequest = (): DoiNhomCreateRequest | null => {
     const tenDoiNhom = formValues.tenDoiNhom.trim();
     const soDienThoai = formValues.soDienThoai.trim();
     const diaChi = formValues.diaChi.trim();
@@ -228,6 +236,7 @@ export default function DoiNhom() {
   const resetForm = () => {
     setFormValues(defaultFormValues);
     setFormErrors(defaultFormErrors);
+    setEditingTeamId(null);
   };
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
@@ -236,7 +245,7 @@ export default function DoiNhom() {
       return;
     }
 
-    const request = buildCreateRequest();
+    const request = buildUpsertRequest();
     if (!request) {
       return;
     }
@@ -246,12 +255,12 @@ export default function DoiNhom() {
     setSuccessMessage(null);
 
     try {
-      const createdTeam = await createDoiNhom(request);
       const selectedDoiTruong = doiTruongOptions.find(
         (option) => option.id === request.doiTruongTinhNguyenVienId
       );
 
       const doiTruong = {
+        tinhNguyenVienId: request.doiTruongTinhNguyenVienId,
         ten: trimOrFallback(
           selectedDoiTruong?.ten ?? "",
           `Tình nguyện viên #${request.doiTruongTinhNguyenVienId}`
@@ -259,6 +268,33 @@ export default function DoiNhom() {
         avatarUrl: "/images/user/user-01.jpg",
         vaiTro: "truong_nhom" as const,
       };
+
+      if (editingTeamId !== null) {
+        const updatedTeam = await updateDoiNhom(editingTeamId, request);
+        const mappedTeam = mapDoiNhomDtoToTeamRow(updatedTeam, doiTruong);
+
+        setTeams((prev) =>
+          prev.map((team) =>
+            team.id === editingTeamId
+              ? {
+                  ...team,
+                  ...mappedTeam,
+                }
+              : team
+          )
+        );
+        try {
+          const nextDoiTruongOptions = await fetchDoiTruongOptions();
+          setDoiTruongOptions(nextDoiTruongOptions);
+        } catch {
+          // keep existing options list if refresh fails
+        }
+        resetForm();
+        setSuccessMessage("Cập nhật đội nhóm thành công.");
+        return;
+      }
+
+      const createdTeam = await createDoiNhom(request);
 
       const mappedTeam = mapDoiNhomDtoToTeamRow(
         {
@@ -290,6 +326,73 @@ export default function DoiNhom() {
     }
   };
 
+  const handleChangeTeamActive = async (team: TeamTableRow, nextActive: boolean) => {
+    if (updatingActiveTeamId !== null) {
+      return;
+    }
+
+    setUpdatingActiveTeamId(team.id);
+    setActionError(null);
+    setSuccessMessage(null);
+
+    try {
+      const updatedTeam = await updateDoiNhomActive(team.id, {
+        active: nextActive,
+      });
+      const mappedTeam = mapDoiNhomDtoToTeamRow(updatedTeam);
+
+      setTeams((prev) =>
+        prev.map((item) =>
+          item.id === team.id
+            ? {
+                ...item,
+                ...mappedTeam,
+              }
+            : item
+        )
+      );
+      setSuccessMessage(mappedTeam.active ? "Đã kích hoạt đội nhóm." : "Đã tạm ngưng đội nhóm.");
+    } catch (error) {
+      setActionError(getApiErrorMessage(error));
+    } finally {
+      setUpdatingActiveTeamId(null);
+    }
+  };
+
+  const handleEditTeam = (team: TeamTableRow) => {
+    if (isSubmitting) {
+      return;
+    }
+
+    const leaderId = team.doiTruong.tinhNguyenVienId;
+    if (
+      leaderId &&
+      !doiTruongOptions.some((option) => option.id === leaderId)
+    ) {
+      setDoiTruongOptions((prev) => [
+        {
+          id: leaderId,
+          ten: team.doiTruong.ten,
+          soDienThoai: "Chua cap nhat",
+        },
+        ...prev,
+      ]);
+    }
+
+    setEditingTeamId(team.id);
+    setFormValues({
+      tenDoiNhom: team.tenDoiNhom,
+      soDienThoai: team.soDienThoai === "Chua cap nhat" ? "" : team.soDienThoai,
+      diaChi: team.diaChi === "Chua cap nhat" ? "" : team.diaChi,
+      doiTruongTinhNguyenVienId: team.doiTruong.tinhNguyenVienId
+        ? String(team.doiTruong.tinhNguyenVienId)
+        : "",
+    });
+    setFormErrors(defaultFormErrors);
+    setActionError(null);
+    setSuccessMessage(null);
+  };
+
   return (
     <>
       <PageMeta
@@ -317,8 +420,12 @@ export default function DoiNhom() {
         )}
 
         <ComponentCard
-          title="Thêm đội nhóm"
-          desc="Tạo mới đội nhóm và chỉ định đội trưởng theo API backend."
+          title={editingTeamId !== null ? "Cập nhật đội nhóm" : "Thêm đội nhóm"}
+          desc={
+            editingTeamId !== null
+              ? "Chỉnh sửa thông tin đội nhóm và đội trưởng."
+              : "Tạo mới đội nhóm và chỉ định đội trưởng theo API backend."
+          }
         >
           {isLoadingDoiTruong && (
             <div className="mb-4 rounded-lg border border-brand-200 bg-brand-50 px-4 py-3 text-theme-sm text-brand-700 dark:border-brand-500/30 dark:bg-brand-500/10 dark:text-brand-300">
@@ -415,8 +522,25 @@ export default function DoiNhom() {
                 }
                 className="inline-flex items-center justify-center rounded-lg bg-brand-500 px-4 py-2.5 text-sm font-medium text-white hover:bg-brand-600 disabled:cursor-not-allowed disabled:opacity-70"
               >
-                {isSubmitting ? "Đang thêm..." : "Thêm đội nhóm"}
+                {editingTeamId !== null
+                  ? isSubmitting
+                    ? "Đang cập nhật..."
+                    : "Cập nhật thông tin"
+                  : isSubmitting
+                    ? "Đang thêm..."
+                    : "Thêm đội nhóm"}
               </button>
+
+              {editingTeamId !== null && (
+                <button
+                  type="button"
+                  onClick={resetForm}
+                  disabled={isSubmitting}
+                  className="inline-flex items-center justify-center rounded-lg border border-gray-300 px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-70 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-white/10"
+                >
+                  Hủy chỉnh sửa
+                </button>
+              )}
             </div>
           </form>
         </ComponentCard>
@@ -427,7 +551,14 @@ export default function DoiNhom() {
               Đang tải danh sách đội nhóm...
             </div>
           )}
-          <DanhSachDoiNhom teams={teams} />
+          <DanhSachDoiNhom
+            teams={teams}
+            onEditTeam={handleEditTeam}
+            onChangeTeamActive={(team, active) => {
+              void handleChangeTeamActive(team, active);
+            }}
+            updatingActiveTeamId={updatingActiveTeamId}
+          />
         </ComponentCard>
       </div>
     </>

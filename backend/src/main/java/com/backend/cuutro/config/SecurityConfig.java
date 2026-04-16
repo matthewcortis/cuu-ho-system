@@ -42,6 +42,8 @@ public class SecurityConfig implements WebMvcConfigurer {
 						.requestMatchers(HttpMethod.POST, "/phieu-cuu-tro", "/tep-tin/upload").permitAll()
 						.requestMatchers("/don-vi/**", "/doi-nhom/**", "/loai-su-co/**", "/nhom-vat-pham/**", "/vat-pham/**")
 						.hasAuthority(RoleType.ADMIN.name())
+						.requestMatchers("/nguoi-dung/**")
+						.hasAuthority(RoleType.ADMIN.name())
 						.requestMatchers(HttpMethod.POST, "/phieu-cuu-tro/*/dieu-phoi")
 						.hasAuthority(RoleType.ADMIN.name())
 						.requestMatchers(HttpMethod.POST, "/phieu-cuu-tro/*/nhan-nhiem-vu")
