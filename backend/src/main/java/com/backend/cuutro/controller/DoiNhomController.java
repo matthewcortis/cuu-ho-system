@@ -1,7 +1,10 @@
 package com.backend.cuutro.controller;
 
+import java.util.List;
+
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -23,6 +26,12 @@ public class DoiNhomController {
 
 	private final DoiNhomService doiNhomService;
 
+	@GetMapping
+	public ResponseEntity<ResponseData<List<DoiNhomDto>>> getDanhSach(HttpServletRequest httpRequest) {
+		List<DoiNhomDto> data = doiNhomService.getDanhSach();
+		return ResponseEntity.ok(buildResponse(HttpStatus.OK, "Fetched doi nhom list successfully", data, httpRequest));
+	}
+
 	@PostMapping
 	public ResponseEntity<ResponseData<DoiNhomDto>> taoDoiNhom(
 			@Valid @RequestBody DoiNhomTaoRequest request,
@@ -42,4 +51,3 @@ public class DoiNhomController {
 				.build();
 	}
 }
-

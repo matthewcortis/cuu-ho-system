@@ -1,5 +1,6 @@
 package com.backend.cuutro.dto.request;
 
+import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import lombok.AccessLevel;
@@ -24,10 +25,10 @@ public class DoiNhomTaoRequest {
 	@NotBlank(message = "soDienThoai is required")
 	String soDienThoai;
 
-	@NotNull(message = "viTriId is required")
-	Long viTriId;
+	@NotNull(message = "viTri is required")
+	@Valid
+	ViTriInputRequest viTri;
 
 	@NotNull(message = "doiTruongTinhNguyenVienId is required")
 	Long doiTruongTinhNguyenVienId;
 }
-

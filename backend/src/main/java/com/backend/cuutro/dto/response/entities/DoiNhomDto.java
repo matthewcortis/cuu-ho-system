@@ -2,6 +2,7 @@ package com.backend.cuutro.dto.response.entities;
 
 import java.io.Serializable;
 import java.time.Instant;
+import java.util.List;
 
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
@@ -31,5 +32,8 @@ public class DoiNhomDto implements Serializable {
 	Boolean active;
 	String trangThai;
 	Instant createdAt;
+	DoiNhomThanhVienDto doiTruong;
+	List<DoiNhomThanhVienDto> thanhViens;
+	Integer soLuongThanhVien;
 
 }

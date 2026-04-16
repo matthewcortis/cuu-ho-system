@@ -14,13 +14,13 @@ import {
 } from "@/components/ui/table";
 import Badge from "@/components/ui/badge/Badge";
 
-interface TeamMember {
+export interface TeamMember {
   ten: string;
   avatarUrl: string;
   vaiTro: VaiTroDoiNhom;
 }
 
-interface TeamTableRow {
+export interface TeamTableRow {
   id: number;
   tenDoiNhom: string;
   diaChi: string;
@@ -30,6 +30,8 @@ interface TeamTableRow {
 }
 
 interface DanhSachDoiNhomProps {
+  teams?: TeamTableRow[];
+  extraTeams?: TeamTableRow[];
   onEditTeam?: (team: TeamTableRow) => void;
   onDeleteTeam?: (team: TeamTableRow) => void;
 }
@@ -62,10 +64,12 @@ function createMemberFromMapping(
 }
 
 export default function DanhSachDoiNhom({
+  teams,
+  extraTeams = [],
   onEditTeam,
   onDeleteTeam,
 }: DanhSachDoiNhomProps) {
-  const teamRows = useMemo<TeamTableRow[]>(
+  const mockTeamRows = useMemo<TeamTableRow[]>(
     () =>
       mockDatabase.doi_nhom.map((team) => {
         const viTri = mockDatabase.vi_tri.find((item) => item.id === team.vi_tri_id);
@@ -96,6 +100,21 @@ export default function DanhSachDoiNhom({
       }),
     []
   );
+
+  const teamRows = useMemo<TeamTableRow[]>(() => {
+    if (teams) {
+      return teams;
+    }
+
+    if (extraTeams.length === 0) {
+      return mockTeamRows;
+    }
+
+    const extraTeamIds = new Set(extraTeams.map((team) => team.id));
+    const remainingMockTeams = mockTeamRows.filter((team) => !extraTeamIds.has(team.id));
+
+    return [...extraTeams, ...remainingMockTeams];
+  }, [extraTeams, mockTeamRows, teams]);
 
   const handleEdit = (team: TeamTableRow) => onEditTeam?.(team);
   const handleDelete = (team: TeamTableRow) => onDeleteTeam?.(team);
@@ -258,5 +277,3 @@ export default function DanhSachDoiNhom({
     </div>
   );
 }
-
-

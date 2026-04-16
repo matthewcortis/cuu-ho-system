@@ -11,7 +11,7 @@ public interface TinhNguyenVienService {
 
 	TinhNguyenVienDto dangKy(TinhNguyenVienDangKyRequest request);
 
-	List<TinhNguyenVienDto> getDanhSach(String trangThaiDuyet);
+	List<TinhNguyenVienDto> getDanhSach(String trangThaiDuyet, boolean chiLayDoiTruongKhaDung);
 
 	List<TinhNguyenVienDto> getChoXetDuyet();
 
@@ -23,4 +23,3 @@ public interface TinhNguyenVienService {
 
 	DoiNhomTinhNguyenVienDto ganDoiNhom(GanDoiNhomTinhNguyenVienRequest request);
 }
-

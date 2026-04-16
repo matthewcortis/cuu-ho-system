@@ -44,8 +44,9 @@ public class TinhNguyenVienController {
 	@GetMapping
 	public ResponseEntity<ResponseData<List<TinhNguyenVienDto>>> getDanhSach(
 			@RequestParam(required = false) String trangThaiDuyet,
+			@RequestParam(required = false, defaultValue = "false") boolean chiLayDoiTruongKhaDung,
 			HttpServletRequest httpRequest) {
-		List<TinhNguyenVienDto> data = tinhNguyenVienService.getDanhSach(trangThaiDuyet);
+		List<TinhNguyenVienDto> data = tinhNguyenVienService.getDanhSach(trangThaiDuyet, chiLayDoiTruongKhaDung);
 		return ResponseEntity.ok(buildResponse(HttpStatus.OK, "Fetched tinh nguyen vien list successfully", data, httpRequest));
 	}
 
@@ -98,4 +99,3 @@ public class TinhNguyenVienController {
 				.build();
 	}
 }
-

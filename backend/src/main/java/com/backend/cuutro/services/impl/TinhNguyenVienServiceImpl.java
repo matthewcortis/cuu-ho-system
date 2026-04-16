@@ -3,6 +3,7 @@ package com.backend.cuutro.services.impl;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -68,7 +69,7 @@ public class TinhNguyenVienServiceImpl implements TinhNguyenVienService {
 	}
 
 	@Override
-	public List<TinhNguyenVienDto> getDanhSach(String trangThaiDuyet) {
+	public List<TinhNguyenVienDto> getDanhSach(String trangThaiDuyet, boolean chiLayDoiTruongKhaDung) {
 		List<TinhNguyenVienEntity> entities;
 		if (!StringUtils.hasText(trangThaiDuyet)) {
 			entities = tinhNguyenVienRepository.findAllByOrderByCreatedAtDesc();
@@ -76,6 +77,13 @@ public class TinhNguyenVienServiceImpl implements TinhNguyenVienService {
 			TrangThaiDuyetTinhNguyenVien trangThai = parseTrangThaiDuyet(trangThaiDuyet);
 			entities = tinhNguyenVienRepository.findByTrangThaiDuyetOrderByCreatedAtDesc(trangThai.name());
 		}
+
+		if (chiLayDoiTruongKhaDung) {
+			entities = entities.stream()
+					.filter(item -> !doiNhomTinhNguyenVienRepository.existsByTinhNguyenVien_IdAndVaiTro(item.getId(), "truong_nhom"))
+					.collect(Collectors.toList());
+		}
+
 		return tinhNguyenVienMapper.toDtoList(entities);
 	}
 
