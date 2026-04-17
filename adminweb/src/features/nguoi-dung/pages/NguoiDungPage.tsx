@@ -69,10 +69,10 @@ const TRANG_THAI_FILTER_OPTIONS: Array<{
   value: TrangThaiNguoiDungFilter;
   label: string;
 }> = [
-  { value: "all", label: "All" },
-  { value: "active", label: "Active" },
-  { value: "inactive", label: "Inactive" },
-];
+    { value: "all", label: "All" },
+    { value: "active", label: "Active" },
+    { value: "inactive", label: "Inactive" },
+  ];
 
 function trimOrFallback(value: string | null | undefined, fallback: string): string {
   if (typeof value !== "string") {
@@ -183,20 +183,20 @@ function buildHoTroHistoryByNguoiDungId(
       const vatPhamHoTro =
         phieu.chiTietCuuTro.length > 0
           ? phieu.chiTietCuuTro.map((item) => ({
-              tenVatPham: trimOrFallback(item.tenVatPham, "Chua co ten vat pham"),
-              soLuong:
-                item.soLuong === null || item.soLuong === undefined
-                  ? "Chua cap nhat"
-                  : String(item.soLuong),
-              ghiChu: trimOrFallback(item.ghiChu, "Khong co ghi chu"),
-            }))
+            tenVatPham: trimOrFallback(item.tenVatPham, "Chua co ten vat pham"),
+            soLuong:
+              item.soLuong === null || item.soLuong === undefined
+                ? "Chua cap nhat"
+                : String(item.soLuong),
+            ghiChu: trimOrFallback(item.ghiChu, "Khong co ghi chu"),
+          }))
           : [
-              {
-                tenVatPham: "Chua co thong tin vat pham",
-                soLuong: "Chua cap nhat",
-                ghiChu: "Phieu chua co danh sach chi tiet cuu tro",
-              },
-            ];
+            {
+              tenVatPham: "Chua co thong tin vat pham",
+              soLuong: "Chua cap nhat",
+              ghiChu: "Phieu chua co danh sach chi tiet cuu tro",
+            },
+          ];
 
       return {
         id: phieu.id,
@@ -327,10 +327,10 @@ export default function NguoiDungPage() {
     () =>
       selectedNguoiDung
         ? buildHoTroHistoryByNguoiDungId(
-            selectedNguoiDung.id,
-            selectedNguoiDung.ten,
-            phieuCuuTroList
-          )
+          selectedNguoiDung.id,
+          selectedNguoiDung.ten,
+          phieuCuuTroList
+        )
         : ([] as HoTroPhieuHistory[]),
     [selectedNguoiDung, phieuCuuTroList]
   );
@@ -454,31 +454,29 @@ export default function NguoiDungPage() {
   return (
     <>
       <PageMeta
-        title="Nguoi dung"
-        description="Trang quan ly nguoi dung: danh sach, trang thai tai khoan active va lich su tao phieu cuu tro."
+        title="Người dùng"
+        description="Trang quản lý người dùng: danh sách, trạng thái tài khoản đang hoạt động và lịch sử tạo phiếu cứu trợ."
       />
-      <PageBreadCrumb pageTitle="Nguoi dung" />
+      <PageBreadCrumb pageTitle="Người dùng" />
 
       <div className="space-y-6">
         <ComponentCard
-          title="Danh sach nguoi dung"
-          desc="Nhan vao tung dong de xem thong tin chi tiet va lich su tao phieu cuu tro."
+          title="Danh sách người dùng"
+          desc="Nhấn vào từng dòng để xem thông tin chi tiết và lịch sử tạo phiếu cứu trợ."
         >
           {isNguoiDungLoading && (
             <div className="rounded-lg border border-brand-200 bg-brand-50 px-4 py-3 text-theme-sm text-brand-700 dark:border-brand-500/30 dark:bg-brand-500/10 dark:text-brand-300">
-              Dang tai du lieu nguoi dung va phieu cuu tro tu backend...
+              Đang tải dữ liệu người dùng và phiếu cứu trợ từ backend...
             </div>
           )}
 
           {nguoiDungApiError && (
             <div className="rounded-lg border border-warning-200 bg-warning-50 px-4 py-3 text-theme-sm text-warning-700 dark:border-warning-500/30 dark:bg-warning-500/10 dark:text-warning-300">
-              Khong the tai day du du lieu API: {nguoiDungApiError}
+              Không thể tải đầy đủ dữ liệu API: {nguoiDungApiError}
             </div>
           )}
 
           <div className="mb-5 grid grid-cols-1 gap-4 lg:grid-cols-3">
-
-
             <div>
               <Label htmlFor="nguoi-dung-trang-thai-filter">Lọc trạng thái</Label>
               <select
@@ -500,19 +498,20 @@ export default function NguoiDungPage() {
                 ))}
               </select>
             </div>
+
             <div>
               <Label htmlFor="nguoi-dung-dia-chi-filter">Nhập địa chỉ hoặc khu vực</Label>
               <Input
                 id="nguoi-dung-dia-chi-filter"
                 type="text"
-                placeholder="Nhap dia chi can loc"
+                placeholder="Nhập địa chỉ cần lọc"
                 value={diaChiFilter}
                 onChange={(event) => setDiaChiFilter(event.target.value)}
               />
             </div>
 
             <div>
-              <Label htmlFor="nguoi-dung-rows-per-page">Số trang</Label>
+              <Label htmlFor="nguoi-dung-rows-per-page">Số dòng mỗi trang</Label>
               <select
                 id="nguoi-dung-rows-per-page"
                 value={rowsPerPage}
@@ -565,7 +564,7 @@ export default function NguoiDungPage() {
                       isHeader
                       className="px-4 py-3 font-medium text-gray-500 text-center text-theme-xs dark:text-gray-400"
                     >
-                      Hành động 
+                      Hành động
                     </TableCell>
                   </TableRow>
                 </TableHeader>
@@ -625,12 +624,12 @@ export default function NguoiDungPage() {
                               }}
                               className="h-9 w-full rounded-lg border border-gray-300 bg-white px-3 text-xs text-gray-700 shadow-theme-xs focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 disabled:cursor-not-allowed disabled:opacity-70 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90"
                             >
-                              <option value="active">Dang hoat dong</option>
-                              <option value="inactive">Tam khoa</option>
+                              <option value="active">Đang hoạt động</option>
+                              <option value="inactive">Tạm khóa</option>
                             </select>
                             {isUpdatingTrangThaiByNguoiDungId[nguoiDung.id] && (
                               <span className="text-xs text-gray-500 dark:text-gray-400">
-                                Dang cap nhat...
+                                Đang cập nhật...
                               </span>
                             )}
                           </div>
@@ -645,7 +644,7 @@ export default function NguoiDungPage() {
                                 handleOpenUserDetailDialog(nguoiDung.id);
                               }}
                               className="inline-flex items-center justify-center w-8 h-8 text-gray-600 border border-gray-200 rounded-lg hover:bg-gray-100 hover:text-gray-800 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-white/10 dark:hover:text-white"
-                              aria-label={`Xem chi tiet ${nguoiDung.ten}`}
+                              aria-label={`Xem chi tiết ${nguoiDung.ten}`}
                             >
                               <EyeIcon className="fill-gray-500 dark:fill-gray-400 size-5" />
                             </button>
@@ -662,8 +661,8 @@ export default function NguoiDungPage() {
                         colSpan={5}
                       >
                         {totalFilteredNguoiDung === 0
-                          ? "Khong co nguoi dung phu hop bo loc."
-                          : "Chua co nguoi dung nao trong danh sach."}
+                          ? "Không có người dùng phù hợp với bộ lọc."
+                          : "Chưa có người dùng nào trong danh sách."}
                       </td>
                     </TableRow>
                   )}
@@ -703,7 +702,7 @@ export default function NguoiDungPage() {
                     {selectedNguoiDung.ten}
                   </h4>
                   <p className="text-theme-sm text-gray-500 dark:text-gray-400">
-                    Ma nguoi dung: {selectedNguoiDung.id}
+                    Mã người dùng: {selectedNguoiDung.id}
                   </p>
                 </div>
               </div>
@@ -721,8 +720,8 @@ export default function NguoiDungPage() {
                   selectedNguoiDung.id,
                   selectedNguoiDung.trangThaiKichHoat
                 )
-                  ? "Tai khoan dang hoat dong"
-                  : "Tai khoan tam khoa"}
+                  ? "Tài khoản đang hoạt động"
+                  : "Tài khoản tạm khóa"}
               </Badge>
             </div>
 
@@ -759,7 +758,7 @@ export default function NguoiDungPage() {
                   Tài khoản ID
                 </p>
                 <p className="mt-1 text-theme-sm font-medium text-gray-800 dark:text-white/90">
-                  {selectedNguoiDung.taiKhoanId ?? "Chua cap nhat"}
+                  {selectedNguoiDung.taiKhoanId ?? "Chưa cập nhật"}
                 </p>
               </div>
 
@@ -804,7 +803,7 @@ export default function NguoiDungPage() {
                       {selectedNguoiDung.tongSoPhieuHoTro}
                     </p>
                     <p className="mt-1 text-theme-xs text-brand-600 dark:text-brand-400">
-                      Nhan vao de xem lich su tao phieu cuu tro
+                      Nhấn vào để xem lịch sử tạo phiếu cứu trợ
                     </p>
                   </div>
                   <span
@@ -821,7 +820,7 @@ export default function NguoiDungPage() {
                   <div className="mt-4 space-y-3 border-t border-gray-100 pt-4 dark:border-white/[0.06]">
                     {selectedNguoiDungHoTroList.length === 0 ? (
                       <div className="rounded-lg border border-dashed border-gray-300 p-4 text-theme-sm text-gray-500 dark:border-gray-700 dark:text-gray-400">
-                        Chua co lich su tao phieu cuu tro
+                        Chưa có lịch sử tạo phiếu cứu trợ
                       </div>
                     ) : (
                       selectedNguoiDungHoTroList.map((phieuHoTro) => {
@@ -839,13 +838,13 @@ export default function NguoiDungPage() {
                             >
                               <div>
                                 <p className="text-theme-sm font-medium text-gray-800 dark:text-white/90">
-                                  Phieu #{phieuHoTro.id}
+                                  Phiếu #{phieuHoTro.id}
                                 </p>
                                 <p className="text-theme-xs text-gray-500 dark:text-gray-400">
                                   {formatDateTime(phieuHoTro.thoiGianHoTro)}
                                 </p>
                                 <p className="text-theme-xs text-gray-500 dark:text-gray-400">
-                                  Trang thai: {phieuHoTro.trangThaiPhieu}
+                                  Trạng thái: {phieuHoTro.trangThaiPhieu}
                                 </p>
                               </div>
                               <span className="text-theme-xs font-medium text-brand-600 dark:text-brand-400">
@@ -871,14 +870,14 @@ export default function NguoiDungPage() {
                                 </div>
 
                                 <p className="text-theme-xs text-gray-500 dark:text-gray-400">
-                                  Dia chi ho tro:{" "}
+                                  Địa chỉ hỗ trợ:{" "}
                                   <span className="font-medium text-gray-800 dark:text-white/90">
                                     {phieuHoTro.diaChi}
                                   </span>
                                 </p>
 
                                 <p className="text-theme-xs text-gray-500 dark:text-gray-400">
-                                  Ghi chu:{" "}
+                                  Ghi chú:{" "}
                                   <span className="font-medium text-gray-800 dark:text-white/90">
                                     {phieuHoTro.ghiChu}
                                   </span>
@@ -886,7 +885,7 @@ export default function NguoiDungPage() {
 
                                 <div>
                                   <p className="mb-2 text-theme-xs font-medium text-gray-700 dark:text-gray-300">
-                                    Vat pham can cuu tro
+                                    Vật phẩm cần cứu trợ
                                   </p>
                                   <div className="space-y-2">
                                     {phieuHoTro.vatPhamHoTro.map((vatPham, index) => (

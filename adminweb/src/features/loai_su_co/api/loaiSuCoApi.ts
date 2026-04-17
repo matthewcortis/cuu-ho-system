@@ -17,9 +17,20 @@ export interface LoaiSuCoDto {
   createdAt: string;
 }
 
+export interface TepTinLiteDto {
+  id: number;
+  duongDan: string;
+  loaiTepTin: string;
+}
+
 export interface LoaiSuCoUpsertRequest {
   ten: string;
   iconUrl: string | null;
+}
+
+export interface LoaiSuCoIconUploadRequest {
+  iconFile: File;
+  tenLoaiSuCo: string;
 }
 
 export class LoaiSuCoApiError extends Error {
@@ -79,6 +90,18 @@ function parseLoaiSuCoDto(value: unknown): LoaiSuCoDto | null {
     ten: typeof value.ten === "string" ? value.ten : "",
     iconUrl: typeof value.iconUrl === "string" ? value.iconUrl : "",
     createdAt: typeof value.createdAt === "string" ? value.createdAt : "",
+  };
+}
+
+function parseTepTinLite(value: unknown): TepTinLiteDto | null {
+  if (!isObjectRecord(value) || typeof value.id !== "number") {
+    return null;
+  }
+
+  return {
+    id: value.id,
+    duongDan: typeof value.duongDan === "string" ? value.duongDan : "",
+    loaiTepTin: typeof value.loaiTepTin === "string" ? value.loaiTepTin : "",
   };
 }
 
@@ -208,4 +231,31 @@ export async function deleteLoaiSuCo(id: number): Promise<void> {
       Authorization: authorization,
     },
   });
+}
+
+export async function uploadLoaiSuCoIcon(
+  request: LoaiSuCoIconUploadRequest
+): Promise<TepTinLiteDto> {
+  const authorization = getAuthHeaderOrThrow();
+  const formData = new FormData();
+  const tenLoaiSuCo = request.tenLoaiSuCo.trim();
+
+  formData.append("tepTin", request.iconFile);
+  formData.append("thuMuc", "iconloaisuco");
+  formData.append("tenTep", tenLoaiSuCo || `icon-loai-su-co-${Date.now()}`);
+
+  const envelope = await requestEnvelope<unknown>("/tep-tin/upload", {
+    method: "POST",
+    headers: {
+      Authorization: authorization,
+    },
+    body: formData,
+  });
+
+  const parsedItem = parseTepTinLite(envelope.data);
+  if (!parsedItem) {
+    throw new LoaiSuCoApiError("Backend khong tra ve icon vua tai len", envelope.status);
+  }
+
+  return parsedItem;
 }

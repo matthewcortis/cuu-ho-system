@@ -49,25 +49,25 @@ export default function LoaiSuCoTable({
                 isHeader
                 className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
               >
-                Ten loai su co
+                Tên loại sự cố
               </TableCell>
               <TableCell
                 isHeader
                 className="px-4 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
               >
-                Icon URL
+                URL icon
               </TableCell>
               <TableCell
                 isHeader
                 className="px-4 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
               >
-                Ngay tao
+                Ngày tạo
               </TableCell>
               <TableCell
                 isHeader
                 className="px-4 py-3 font-medium text-gray-500 text-center text-theme-xs dark:text-gray-400"
               >
-                Hanh dong
+                Hành động
               </TableCell>
             </TableRow>
           </TableHeader>
@@ -89,7 +89,7 @@ export default function LoaiSuCoTable({
                     </div>
                   ) : (
                     <span className="text-theme-xs text-gray-500 dark:text-gray-400">
-                      Khong co icon
+                      Không có icon
                     </span>
                   )}
                 </TableCell>
@@ -104,7 +104,7 @@ export default function LoaiSuCoTable({
                   {item.iconUrl ? (
                     <span className="line-clamp-1">{item.iconUrl}</span>
                   ) : (
-                    "Chua cap nhat"
+                    "Chưa cập nhật"
                   )}
                 </TableCell>
 
@@ -118,7 +118,7 @@ export default function LoaiSuCoTable({
                       type="button"
                       onClick={() => onEditItem?.(item)}
                       className="inline-flex items-center justify-center w-8 h-8 text-gray-600 border border-gray-200 rounded-lg hover:bg-gray-100 hover:text-gray-800 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-white/10 dark:hover:text-white"
-                      aria-label={`Sua ${item.ten}`}
+                      aria-label={`Sửa ${item.ten}`}
                     >
                       <PencilIcon className="size-4" />
                     </button>
@@ -126,7 +126,7 @@ export default function LoaiSuCoTable({
                       type="button"
                       onClick={() => onDeleteItem?.(item)}
                       className="inline-flex items-center justify-center w-8 h-8 text-error-600 border border-error-200 rounded-lg hover:bg-error-50 dark:border-error-500/30 dark:text-error-400 dark:hover:bg-error-500/10"
-                      aria-label={`Xoa ${item.ten}`}
+                      aria-label={`Xóa ${item.ten}`}
                     >
                       <TrashBinIcon className="size-4" />
                     </button>
@@ -141,7 +141,7 @@ export default function LoaiSuCoTable({
                   className="px-5 py-10 text-center text-gray-500 text-theme-sm dark:text-gray-400"
                   colSpan={5}
                 >
-                  Chua co loai su co nao.
+                  Chưa có loại sự cố nào.
                 </td>
               </TableRow>
             )}
