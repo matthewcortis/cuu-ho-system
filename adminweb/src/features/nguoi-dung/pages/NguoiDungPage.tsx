@@ -1,7 +1,8 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import ComponentCard from "@/components/common/ComponentCard";
 import PageBreadCrumb from "@/components/common/PageBreadCrumb";
 import PageMeta from "@/components/common/PageMeta";
+import Pagination from "@/components/common/Pagination";
 import Badge from "@/components/ui/badge/Badge";
 import Label from "@/components/form/Label";
 import Input from "@/components/form/input/InputField";
@@ -15,6 +16,10 @@ import {
 import { EyeIcon } from "@/icons";
 import { Modal } from "@/components/ui/modal";
 import { useModal } from "@/hooks/useModal";
+import ActionToast, {
+  type ActionToastData,
+  type ActionToastType,
+} from "@/components/common/ActionToast";
 import {
   fetchNguoiDungList,
   fetchPhieuCuuTroList,
@@ -211,8 +216,7 @@ export default function NguoiDungPage() {
   const [phieuCuuTroList, setPhieuCuuTroList] = useState<PhieuCuuTroDto[]>([]);
   const [isNguoiDungLoading, setIsNguoiDungLoading] = useState<boolean>(false);
   const [nguoiDungApiError, setNguoiDungApiError] = useState<string | null>(null);
-  const [actionError, setActionError] = useState<string | null>(null);
-  const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [actionToast, setActionToast] = useState<ActionToastData | null>(null);
 
   const nguoiDungList = useMemo(
     () => buildNguoiDungTableData(nguoiDungApiList, phieuCuuTroList),
@@ -238,14 +242,24 @@ export default function NguoiDungPage() {
   const [rowsPerPage, setRowsPerPage] = useState<number>(ROWS_PER_PAGE_OPTIONS[0]);
   const [currentPage, setCurrentPage] = useState<number>(1);
 
+  const showActionToast = useCallback(
+    (type: ActionToastType, title: string, message: string) => {
+      setActionToast({
+        id: Date.now(),
+        type,
+        title,
+        message,
+      });
+    },
+    []
+  );
+
   useEffect(() => {
     let isMounted = true;
 
     const loadNguoiDungData = async () => {
       setIsNguoiDungLoading(true);
       setNguoiDungApiError(null);
-      setActionError(null);
-      setSuccessMessage(null);
 
       try {
         const [nguoiDungResult, phieuResult] = await Promise.all([
@@ -344,35 +358,11 @@ export default function NguoiDungPage() {
 
   const totalFilteredNguoiDung = filteredNguoiDungList.length;
   const totalPages = Math.max(1, Math.ceil(totalFilteredNguoiDung / rowsPerPage));
-  const showingFrom =
-    totalFilteredNguoiDung === 0 ? 0 : (currentPage - 1) * rowsPerPage + 1;
-  const showingTo =
-    totalFilteredNguoiDung === 0
-      ? 0
-      : Math.min(currentPage * rowsPerPage, totalFilteredNguoiDung);
 
   const paginatedNguoiDungList = useMemo(() => {
     const startIndex = (currentPage - 1) * rowsPerPage;
     return filteredNguoiDungList.slice(startIndex, startIndex + rowsPerPage);
   }, [currentPage, filteredNguoiDungList, rowsPerPage]);
-
-  const pageNumbers = useMemo(() => {
-    const maxPageButtons = 5;
-    const pages: number[] = [];
-
-    let startPage = Math.max(1, currentPage - 2);
-    let endPage = Math.min(totalPages, startPage + maxPageButtons - 1);
-
-    if (endPage - startPage + 1 < maxPageButtons) {
-      startPage = Math.max(1, endPage - maxPageButtons + 1);
-    }
-
-    for (let page = startPage; page <= endPage; page += 1) {
-      pages.push(page);
-    }
-
-    return pages;
-  }, [currentPage, totalPages]);
 
   useEffect(() => {
     setCurrentPage(1);
@@ -395,8 +385,6 @@ export default function NguoiDungPage() {
       return;
     }
 
-    setActionError(null);
-    setSuccessMessage(null);
     setIsUpdatingTrangThaiByNguoiDungId((prev) => ({
       ...prev,
       [nguoiDung.id]: true,
@@ -411,6 +399,11 @@ export default function NguoiDungPage() {
         nguoiDung.id,
         nextTrangThai
       );
+      const isActivated = Boolean(updatedNguoiDung.taiKhoan?.trangThai);
+      const message = isActivated
+        ? `Da kich hoat tai khoan ${nguoiDung.ten}.`
+        : `Da tam khoa tai khoan ${nguoiDung.ten}.`;
+
       setNguoiDungApiList((prev) =>
         prev.map((item) => (item.id === updatedNguoiDung.id ? updatedNguoiDung : item))
       );
@@ -418,17 +411,18 @@ export default function NguoiDungPage() {
         ...prev,
         [updatedNguoiDung.id]: Boolean(updatedNguoiDung.taiKhoan?.trangThai),
       }));
-      setSuccessMessage(
-        nextTrangThai
-          ? `Da kich hoat tai khoan ${nguoiDung.ten}.`
-          : `Da tam khoa tai khoan ${nguoiDung.ten}.`
+      showActionToast(
+        "success",
+        "Cap nhat trang thai tai khoan",
+        message,
       );
     } catch (error) {
+      const errorMessage = getApiErrorMessage(error);
       setTrangThaiByNguoiDungId((prev) => ({
         ...prev,
         [nguoiDung.id]: currentTrangThai,
       }));
-      setActionError(getApiErrorMessage(error));
+      showActionToast("error", "Khong the cap nhat", errorMessage);
     } finally {
       setIsUpdatingTrangThaiByNguoiDungId((prev) => ({
         ...prev,
@@ -466,18 +460,6 @@ export default function NguoiDungPage() {
       <PageBreadCrumb pageTitle="Nguoi dung" />
 
       <div className="space-y-6">
-        {actionError && (
-          <div className="rounded-lg border border-error-200 bg-error-50 px-4 py-3 text-theme-sm text-error-700 dark:border-error-500/30 dark:bg-error-500/10 dark:text-error-300">
-            {actionError}
-          </div>
-        )}
-
-        {successMessage && (
-          <div className="rounded-lg border border-success-200 bg-success-50 px-4 py-3 text-theme-sm text-success-700 dark:border-success-500/30 dark:bg-success-500/10 dark:text-success-300">
-            {successMessage}
-          </div>
-        )}
-
         <ComponentCard
           title="Danh sach nguoi dung"
           desc="Nhan vao tung dong de xem thong tin chi tiet va lich su tao phieu cuu tro."
@@ -665,7 +647,7 @@ export default function NguoiDungPage() {
                               className="inline-flex items-center justify-center w-8 h-8 text-gray-600 border border-gray-200 rounded-lg hover:bg-gray-100 hover:text-gray-800 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-white/10 dark:hover:text-white"
                               aria-label={`Xem chi tiet ${nguoiDung.ten}`}
                             >
-                              <EyeIcon className="size-4" />
+                              <EyeIcon className="fill-gray-500 dark:fill-gray-400 size-5" />
                             </button>
                           </div>
                         </TableCell>
@@ -690,49 +672,13 @@ export default function NguoiDungPage() {
             </div>
           </div>
 
-          <div className="mt-4 flex flex-col gap-3 border-t border-gray-100 pt-4 dark:border-white/[0.08] sm:flex-row sm:items-center sm:justify-between">
-            <p className="text-theme-xs text-gray-500 dark:text-gray-400">
-              Hiển thị {showingFrom} - {showingTo} trong tổng số {totalFilteredNguoiDung} (tổng:{" "}
-              {nguoiDungList.length})
-            </p>
-
-            <div className="flex flex-wrap items-center gap-2">
-              <button
-                type="button"
-                onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
-                disabled={currentPage === 1 || totalFilteredNguoiDung === 0}
-                className="inline-flex h-9 items-center justify-center rounded-lg border border-gray-200 px-3 text-theme-xs font-medium text-gray-600 transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-white/[0.08] dark:text-gray-300 dark:hover:bg-white/[0.06]"
-              >
-                Trước
-              </button>
-
-              {totalFilteredNguoiDung > 0 &&
-                pageNumbers.map((page) => (
-                  <button
-                    key={page}
-                    type="button"
-                    onClick={() => setCurrentPage(page)}
-                    className={`inline-flex h-9 min-w-9 items-center justify-center rounded-lg border px-3 text-theme-xs font-medium transition ${currentPage === page
-                        ? "border-brand-500 bg-brand-500 text-white"
-                        : "border-gray-200 text-gray-600 hover:bg-gray-50 dark:border-white/[0.08] dark:text-gray-300 dark:hover:bg-white/[0.06]"
-                      }`}
-                  >
-                    {page}
-                  </button>
-                ))}
-
-              <button
-                type="button"
-                onClick={() =>
-                  setCurrentPage((prev) => Math.min(totalPages, prev + 1))
-                }
-                disabled={currentPage >= totalPages || totalFilteredNguoiDung === 0}
-                className="inline-flex h-9 items-center justify-center rounded-lg border border-gray-200 px-3 text-theme-xs font-medium text-gray-600 transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-white/[0.08] dark:text-gray-300 dark:hover:bg-white/[0.06]"
-              >
-                Sau
-              </button>
-            </div>
-          </div>
+          <Pagination
+            currentPage={currentPage}
+            totalItems={totalFilteredNguoiDung}
+            itemsPerPage={rowsPerPage}
+            totalItemsOverall={nguoiDungList.length}
+            onPageChange={setCurrentPage}
+          />
         </ComponentCard>
       </div>
 
@@ -978,8 +924,7 @@ export default function NguoiDungPage() {
           </div>
         )}
       </Modal>
+      <ActionToast toast={actionToast} onClose={() => setActionToast(null)} />
     </>
   );
 }
-
-

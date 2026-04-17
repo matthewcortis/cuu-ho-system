@@ -1,9 +1,10 @@
-import { FormEvent, useEffect, useState } from "react";
+import { FormEvent, useEffect, useMemo, useState } from "react";
 import PageBreadcrumb from "@/components/common/PageBreadCrumb";
 import ComponentCard from "@/components/common/ComponentCard";
 import PageMeta from "@/components/common/PageMeta";
 import Label from "@/components/form/Label";
 import Input from "@/components/form/input/InputField";
+import Combobox, { type ComboboxOptionItem } from "@/components/form/Combobox";
 import DanhSachDoiNhom, {
   type TeamTableRow,
 } from "@/features/tinh-nguyen-vien/components/DanhSachDoiNhom";
@@ -170,6 +171,17 @@ export default function DoiNhom() {
       isMounted = false;
     };
   }, []);
+
+  const doiTruongComboboxOptions = useMemo<ComboboxOptionItem[]>(
+    () =>
+      doiTruongOptions.map((option) => ({
+        value: String(option.id),
+        label: option.ten,
+        description: option.soDienThoai,
+        searchText: `${option.ten} ${option.soDienThoai}`,
+      })),
+    [doiTruongOptions]
+  );
 
   const handleChangeFormValue = (field: keyof DoiNhomFormValues, value: string) => {
     setFormValues((prev) => ({
@@ -482,35 +494,23 @@ export default function DoiNhom() {
 
               <div>
                 <Label htmlFor="doi-truong-id">Đội trưởng (tình nguyện viên)</Label>
-                <div className="relative">
-                  <select
-                    id="doi-truong-id"
-                    value={formValues.doiTruongTinhNguyenVienId}
-                    onChange={(event) =>
-                      handleChangeFormValue(
-                        "doiTruongTinhNguyenVienId",
-                        event.target.value
-                      )
-                    }
-                    className={`h-11 w-full appearance-none rounded-lg border bg-transparent px-4 py-2.5 pr-11 text-sm shadow-theme-xs focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:focus:border-brand-800 ${
-                      formErrors.doiTruongTinhNguyenVienId
-                        ? "border-error-500 focus:border-error-300 focus:ring-error-500/20 dark:border-error-500 dark:focus:border-error-800"
-                        : "border-gray-300 text-gray-800 dark:text-white/90"
-                    }`}
-                  >
-                    <option value="">Chọn đội trưởng</option>
-                    {doiTruongOptions.map((option) => (
-                      <option key={option.id} value={String(option.id)}>
-                        {option.ten} - {option.soDienThoai}
-                      </option>
-                    ))}
-                  </select>
-                  {formErrors.doiTruongTinhNguyenVienId && (
-                    <p className="mt-1.5 text-xs text-error-500">
-                      {formErrors.doiTruongTinhNguyenVienId}
-                    </p>
-                  )}
-                </div>
+                <Combobox
+                  id="doi-truong-id"
+                  options={doiTruongComboboxOptions}
+                  value={formValues.doiTruongTinhNguyenVienId}
+                  onChange={(nextValue) =>
+                    handleChangeFormValue("doiTruongTinhNguyenVienId", nextValue)
+                  }
+                  placeholder={
+                    isLoadingDoiTruong
+                      ? "Dang tai danh sach doi truong..."
+                      : "Chon doi truong"
+                  }
+                  disabled={isLoadingDoiTruong || isSubmitting}
+                  error={Boolean(formErrors.doiTruongTinhNguyenVienId)}
+                  hint={formErrors.doiTruongTinhNguyenVienId}
+                  emptyMessage="Khong tim thay doi truong phu hop."
+                />
               </div>
             </div>
 

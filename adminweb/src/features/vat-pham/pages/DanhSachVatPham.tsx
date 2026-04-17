@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import PageBreadcrumb from "@/components/common/PageBreadCrumb";
 import ComponentCard from "@/components/common/ComponentCard";
 import PageMeta from "@/components/common/PageMeta";
+import Pagination from "@/components/common/Pagination";
 import Label from "@/components/form/Label";
 import Input from "@/components/form/input/InputField";
 import DanhSachVatPhamTable, {
@@ -21,6 +22,7 @@ const statusOptions: Array<{ value: TrangThaiFilter; label: string }> = [
   { value: "san_sang", label: "San sang" },
   { value: "ngung_cung_cap", label: "Ngung cung cap" },
 ];
+const ROWS_PER_PAGE_OPTIONS = [10, 20, 50] as const;
 
 function mapVatPhamDtoToItem(vatPham: VatPhamDto): DanhSachVatPhamItem {
   const soLuong = Number.isFinite(vatPham.soLuong) ? vatPham.soLuong : 0;
@@ -57,6 +59,8 @@ export default function DanhSachVatPhamPage() {
   const [selectedNhomId, setSelectedNhomId] = useState("all");
   const [statusFilter, setStatusFilter] = useState<TrangThaiFilter>("all");
   const [allItems, setAllItems] = useState<DanhSachVatPhamItem[]>([]);
+  const [rowsPerPage, setRowsPerPage] = useState<number>(ROWS_PER_PAGE_OPTIONS[0]);
+  const [currentPage, setCurrentPage] = useState<number>(1);
   const [isLoading, setIsLoading] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
 
@@ -127,6 +131,22 @@ export default function DanhSachVatPhamPage() {
     });
   }, [allItems, searchKeyword, selectedNhomId, statusFilter]);
 
+  const totalFilteredItems = filteredItems.length;
+  const totalPages = Math.max(1, Math.ceil(totalFilteredItems / rowsPerPage));
+
+  const paginatedItems = useMemo(() => {
+    const startIndex = (currentPage - 1) * rowsPerPage;
+    return filteredItems.slice(startIndex, startIndex + rowsPerPage);
+  }, [currentPage, filteredItems, rowsPerPage]);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [rowsPerPage, searchKeyword, selectedNhomId, statusFilter]);
+
+  useEffect(() => {
+    setCurrentPage((prev) => Math.min(prev, totalPages));
+  }, [totalPages]);
+
   return (
     <>
       <PageMeta
@@ -152,7 +172,7 @@ export default function DanhSachVatPhamPage() {
           )}
 
           <div className="space-y-5">
-            <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+            <div className="grid grid-cols-1 gap-4 lg:grid-cols-4">
               <div>
                 <Label htmlFor="search-vat-pham">Tim kiem san pham</Label>
                 <Input
@@ -213,13 +233,41 @@ export default function DanhSachVatPhamPage() {
                   })}
                 </div>
               </div>
+
+              <div>
+                <Label htmlFor="danh-sach-vat-pham-rows-per-page">So dong/trang</Label>
+                <select
+                  id="danh-sach-vat-pham-rows-per-page"
+                  value={rowsPerPage}
+                  onChange={(event) => setRowsPerPage(Number(event.target.value))}
+                  className="h-11 w-full appearance-none rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 pr-11 text-sm text-gray-800 shadow-theme-xs focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:focus:border-brand-800"
+                >
+                  {ROWS_PER_PAGE_OPTIONS.map((option) => (
+                    <option
+                      key={option}
+                      value={option}
+                      className="text-gray-700 dark:bg-gray-900 dark:text-gray-400"
+                    >
+                      {option}
+                    </option>
+                  ))}
+                </select>
+              </div>
             </div>
 
             <p className="text-theme-xs text-gray-500 dark:text-gray-400">
-              Hien thi {filteredItems.length}/{allItems.length} vat pham
+              Hien thi {paginatedItems.length}/{totalFilteredItems} vat pham (tong:{" "}
+              {allItems.length})
             </p>
 
-            <DanhSachVatPhamTable items={filteredItems} />
+            <DanhSachVatPhamTable items={paginatedItems} />
+            <Pagination
+              currentPage={currentPage}
+              totalItems={totalFilteredItems}
+              itemsPerPage={rowsPerPage}
+              totalItemsOverall={allItems.length}
+              onPageChange={setCurrentPage}
+            />
           </div>
         </ComponentCard>
       </div>

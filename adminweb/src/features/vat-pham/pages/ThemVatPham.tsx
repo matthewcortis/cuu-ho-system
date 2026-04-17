@@ -3,16 +3,17 @@ import { useDropzone } from "react-dropzone";
 import PageBreadcrumb from "@/components/common/PageBreadCrumb";
 import ComponentCard from "@/components/common/ComponentCard";
 import PageMeta from "@/components/common/PageMeta";
+import Pagination from "@/components/common/Pagination";
 import Label from "@/components/form/Label";
 import Input from "@/components/form/input/InputField";
-import Select from "@/components/form/Select";
+import Combobox, { type ComboboxOptionItem } from "@/components/form/Combobox";
 import ThemVatPhamTable, {
   type ThemVatPhamItem,
 } from "@/features/vat-pham/components/ThemVatPham";
 import ActionToast, {
   type ActionToastData,
   type ActionToastType,
-} from "@/features/vat-pham/components/ActionToast";
+} from "@/components/common/ActionToast";
 import {
   createVatPhamWithImage,
   deleteVatPham,
@@ -44,6 +45,7 @@ interface SelectOption {
 }
 
 const MAX_SHORT = 32767;
+const ROWS_PER_PAGE_OPTIONS = [10, 20, 50] as const;
 
 function getInitialErrors(): FormErrors {
   return {
@@ -99,12 +101,13 @@ export default function ThemVatPhamPage() {
   const [selectedImagePreviewUrl, setSelectedImagePreviewUrl] = useState("");
   const [selectedImageStoragePath, setSelectedImageStoragePath] = useState("");
   const [errors, setErrors] = useState<FormErrors>(() => getInitialErrors());
-  const [selectInputKey, setSelectInputKey] = useState(0);
   const [editingItemId, setEditingItemId] = useState<number | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [actionToast, setActionToast] = useState<ActionToastData | null>(null);
+  const [rowsPerPage, setRowsPerPage] = useState<number>(ROWS_PER_PAGE_OPTIONS[0]);
+  const [currentPage, setCurrentPage] = useState<number>(1);
   const createdObjectUrlsRef = useRef<string[]>([]);
   const actionToastIdRef = useRef(0);
 
@@ -209,6 +212,38 @@ export default function ThemVatPhamPage() {
     () => items.find((item) => item.id === editingItemId) ?? null,
     [editingItemId, items]
   );
+  const totalItems = items.length;
+  const totalPages = Math.max(1, Math.ceil(totalItems / rowsPerPage));
+  const donViComboboxOptions = useMemo<ComboboxOptionItem[]>(
+    () =>
+      donViOptions.map((option) => ({
+        value: option.value,
+        label: option.label,
+        searchText: option.label,
+      })),
+    [donViOptions]
+  );
+  const nhomVatPhamComboboxOptions = useMemo<ComboboxOptionItem[]>(
+    () =>
+      nhomVatPhamOptions.map((option) => ({
+        value: option.value,
+        label: option.label,
+        searchText: option.label,
+      })),
+    [nhomVatPhamOptions]
+  );
+  const paginatedItems = useMemo(() => {
+    const startIndex = (currentPage - 1) * rowsPerPage;
+    return items.slice(startIndex, startIndex + rowsPerPage);
+  }, [currentPage, items, rowsPerPage]);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [rowsPerPage]);
+
+  useEffect(() => {
+    setCurrentPage((prev) => Math.min(prev, totalPages));
+  }, [totalPages]);
 
   const revokeObjectUrl = (url: string) => {
     if (!url || !url.startsWith("blob:")) return;
@@ -301,7 +336,6 @@ export default function ThemVatPhamPage() {
     setSelectedDonViId("");
     setSelectedNhomVatPhamId("");
     setErrors(getInitialErrors());
-    setSelectInputKey((prev) => prev + 1);
     clearSelectedImage(options?.revokeImage ?? true);
   };
 
@@ -408,6 +442,7 @@ export default function ThemVatPhamPage() {
 
       const createdItem = mapVatPhamDtoToItem(created);
       setItems((prev) => [createdItem, ...prev.filter((item) => item.id !== createdItem.id)]);
+      setCurrentPage(1);
       showActionToast(
         "success",
         "Thêm thành công",
@@ -443,7 +478,6 @@ export default function ThemVatPhamPage() {
     setSelectedDonViId(String(item.donViId));
     setSelectedNhomVatPhamId(String(item.nhomVatPhamId));
     setErrors(getInitialErrors());
-    setSelectInputKey((prev) => prev + 1);
   };
 
   const handleDeleteItem = async (item: ThemVatPhamItem) => {
@@ -686,33 +720,39 @@ export default function ThemVatPhamPage() {
               </div>
 
               <div>
-                <Label>Chọn đơn vị</Label>
-                <Select
-                  key={`don-vi-${selectInputKey}`}
-                  defaultValue={selectedDonViId}
-                  options={donViOptions}
-                  placeholder="Chọn đơn vị"
+                <Label htmlFor="don-vi-combobox">Chọn đơn vị</Label>
+                <Combobox
+                  id="don-vi-combobox"
+                  value={selectedDonViId}
+                  options={donViComboboxOptions}
                   onChange={handleSelectDonVi}
-                  className="dark:bg-dark-900"
+                  placeholder={
+                    isLoading ? "Dang tai danh sach don vi..." : "Chon don vi"
+                  }
+                  disabled={isLoading || isSubmitting}
+                  error={Boolean(errors.donViId)}
+                  hint={errors.donViId}
+                  emptyMessage="Khong tim thay don vi phu hop."
                 />
-                {errors.donViId && (
-                  <p className="mt-1.5 text-xs text-error-500">{errors.donViId}</p>
-                )}
               </div>
 
               <div>
-                <Label>Thêm vào nhóm vật phẩm</Label>
-                <Select
-                  key={`nhom-vat-pham-${selectInputKey}`}
-                  defaultValue={selectedNhomVatPhamId}
-                  options={nhomVatPhamOptions}
-                  placeholder="Chọn nhóm vật phẩm"
+                <Label htmlFor="nhom-vat-pham-combobox">Thêm vào nhóm vật phẩm</Label>
+                <Combobox
+                  id="nhom-vat-pham-combobox"
+                  value={selectedNhomVatPhamId}
+                  options={nhomVatPhamComboboxOptions}
                   onChange={handleSelectNhomVatPham}
-                  className="dark:bg-dark-900"
+                  placeholder={
+                    isLoading
+                      ? "Dang tai danh sach nhom vat pham..."
+                      : "Chon nhom vat pham"
+                  }
+                  disabled={isLoading || isSubmitting}
+                  error={Boolean(errors.nhomVatPhamId)}
+                  hint={errors.nhomVatPhamId}
+                  emptyMessage="Khong tim thay nhom vat pham phu hop."
                 />
-                {errors.nhomVatPhamId && (
-                  <p className="mt-1.5 text-xs text-error-500">{errors.nhomVatPhamId}</p>
-                )}
               </div>
             </div>
 
@@ -766,8 +806,34 @@ export default function ThemVatPhamPage() {
         </ComponentCard>
 
         <ComponentCard title="Danh sách vật phẩm đã thêm">
+          <div className="mb-4 flex flex-col gap-3 border-b border-gray-100 pb-4 dark:border-white/[0.08] sm:flex-row sm:items-end sm:justify-between">
+            <p className="text-theme-xs text-gray-500 dark:text-gray-400">
+              Hien thi {paginatedItems.length}/{items.length} vat pham
+            </p>
+
+            <div className="w-full sm:w-[180px]">
+              <Label htmlFor="them-vat-pham-rows-per-page">So dong/trang</Label>
+              <select
+                id="them-vat-pham-rows-per-page"
+                value={rowsPerPage}
+                onChange={(event) => setRowsPerPage(Number(event.target.value))}
+                className="h-11 w-full appearance-none rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 pr-11 text-sm text-gray-800 shadow-theme-xs focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:focus:border-brand-800"
+              >
+                {ROWS_PER_PAGE_OPTIONS.map((option) => (
+                  <option
+                    key={option}
+                    value={option}
+                    className="text-gray-700 dark:bg-gray-900 dark:text-gray-400"
+                  >
+                    {option}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+
           <ThemVatPhamTable
-            items={items}
+            items={paginatedItems}
             onEditItem={handleEditItem}
             onToggleVisibilityItem={(item) => {
               void handleToggleVisibilityItem(item);
@@ -775,6 +841,12 @@ export default function ThemVatPhamPage() {
             onDeleteItem={(item) => {
               void handleDeleteItem(item);
             }}
+          />
+          <Pagination
+            currentPage={currentPage}
+            totalItems={items.length}
+            itemsPerPage={rowsPerPage}
+            onPageChange={setCurrentPage}
           />
         </ComponentCard>
       </div>

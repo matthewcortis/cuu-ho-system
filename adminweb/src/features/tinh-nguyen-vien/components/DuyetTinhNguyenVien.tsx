@@ -240,7 +240,7 @@ export default function DuyetTinhNguyenVien() {
                       {volunteer.ghiChu}
                     </TableCell>
 
-                    <TableCell className="px-4 py-3">
+                    <TableCell className="px-4 py-3"> 
                       <div className="flex items-center justify-center gap-2">
                         <button
                           type="button"

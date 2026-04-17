@@ -90,6 +90,13 @@ const navItems: NavItem[] = [
       { name: "Quảng lý bảng tin", path: "/quan-ly-bang-tin", pro: false }
     ],
   },
+   {
+    name: "Loại sự cố",
+    icon: <PageIcon />,
+    subItems: [
+      { name: "Loại sự cố", path: "/loai-su-co", pro: false },
+    ],
+  },
   //   {
   //   name: "Forms",
   //   icon: <ListIcon />,
