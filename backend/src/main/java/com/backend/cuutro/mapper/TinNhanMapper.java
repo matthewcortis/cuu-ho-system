@@ -7,7 +7,7 @@ import org.springframework.data.domain.Page;
 
 import java.util.List;
 
-@Mapper(componentModel = "spring", uses = {PhieuCuuTroMapper.class, NguoiDungMapper.class})
+@Mapper(componentModel = "spring", uses = {PhieuCuuTroMapper.class, NguoiDungMapper.class, ViTriMapper.class})
 public interface TinNhanMapper {
 
     TinNhanDto toDto(TinNhanEntity entity);

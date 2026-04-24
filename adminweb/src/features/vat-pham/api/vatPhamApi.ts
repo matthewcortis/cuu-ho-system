@@ -31,7 +31,7 @@ export interface VatPhamDto {
   tenVatPham: string;
   soLuong: number;
   donVi: DonViLiteDto | null;
-  nhomVatPham: NhomVatPhamLiteDto | null;
+  nhomVatPhams: NhomVatPhamLiteDto[];
   tepTin: TepTinLiteDto | null;
   trangThai: boolean;
   createdAt: string;
@@ -41,7 +41,7 @@ export interface VatPhamCreateWithImageRequest {
   tenVatPham: string;
   soLuong: number;
   donViId: number;
-  nhomVatPhamId: number;
+  nhomVatPhamIds: number[];
   anhVatPham: File;
   tepTinId?: number | null;
   trangThai?: boolean;
@@ -51,7 +51,7 @@ export interface VatPhamUpdateRequest {
   tenVatPham: string;
   soLuong: number;
   donViId: number;
-  nhomVatPhamId: number;
+  nhomVatPhamIds: number[];
   tepTinId?: number | null;
   trangThai?: boolean;
 }
@@ -145,6 +145,7 @@ function parseVatPhamDto(value: unknown): VatPhamDto | null {
 
   const donViValue = value.donVi;
   const nhomVatPhamValue = value.nhomVatPham;
+  const nhomVatPhamsValue = value.nhomVatPhams;
   const tepTinValue = value.tepTin;
 
   const donVi =
@@ -153,6 +154,11 @@ function parseVatPhamDto(value: unknown): VatPhamDto | null {
     nhomVatPhamValue === null || nhomVatPhamValue === undefined
       ? null
       : parseNhomVatPhamLite(nhomVatPhamValue);
+  const nhomVatPhams = Array.isArray(nhomVatPhamsValue)
+    ? nhomVatPhamsValue
+        .map(parseNhomVatPhamLite)
+        .filter((item): item is NhomVatPhamLiteDto => item !== null)
+    : [];
   const tepTin =
     tepTinValue === null || tepTinValue === undefined ? null : parseTepTinLite(tepTinValue);
 
@@ -162,16 +168,30 @@ function parseVatPhamDto(value: unknown): VatPhamDto | null {
   if (nhomVatPhamValue !== null && nhomVatPhamValue !== undefined && !nhomVatPham) {
     return null;
   }
+  if (Array.isArray(nhomVatPhamsValue) && nhomVatPhams.length !== nhomVatPhamsValue.length) {
+    return null;
+  }
   if (tepTinValue !== null && tepTinValue !== undefined && !tepTin) {
     return null;
   }
+
+  const uniqueNhomVatPhams = new Map<number, NhomVatPhamLiteDto>();
+  if (nhomVatPham) {
+    uniqueNhomVatPhams.set(nhomVatPham.id, nhomVatPham);
+  }
+  nhomVatPhams.forEach((item) => {
+    if (!uniqueNhomVatPhams.has(item.id)) {
+      uniqueNhomVatPhams.set(item.id, item);
+    }
+  });
+  const normalizedNhomVatPhams = Array.from(uniqueNhomVatPhams.values());
 
   return {
     id: value.id,
     tenVatPham: typeof value.tenVatPham === "string" ? value.tenVatPham : "",
     soLuong: typeof value.soLuong === "number" ? value.soLuong : 0,
     donVi,
-    nhomVatPham,
+    nhomVatPhams: normalizedNhomVatPhams,
     tepTin,
     trangThai: typeof value.trangThai === "boolean" ? value.trangThai : true,
     createdAt: typeof value.createdAt === "string" ? value.createdAt : "",
@@ -249,7 +269,9 @@ export async function createVatPhamWithImage(
   formData.append("tenVatPham", request.tenVatPham);
   formData.append("soLuong", String(request.soLuong));
   formData.append("donViId", String(request.donViId));
-  formData.append("nhomVatPhamId", String(request.nhomVatPhamId));
+  request.nhomVatPhamIds.forEach((nhomVatPhamId) => {
+    formData.append("nhomVatPhamIds", String(nhomVatPhamId));
+  });
   formData.append("anhVatPham", request.anhVatPham);
 
   if (typeof request.tepTinId === "number") {
@@ -317,7 +339,7 @@ export async function updateVatPham(
       tenVatPham: request.tenVatPham,
       soLuong: request.soLuong,
       donViId: request.donViId,
-      nhomVatPhamId: request.nhomVatPhamId,
+      nhomVatPhamIds: request.nhomVatPhamIds,
       tepTinId: request.tepTinId ?? null,
       trangThai: request.trangThai ?? true,
     }),

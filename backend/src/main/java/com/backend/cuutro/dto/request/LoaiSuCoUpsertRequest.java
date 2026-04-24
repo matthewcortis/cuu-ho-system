@@ -21,5 +21,8 @@ public class LoaiSuCoUpsertRequest {
 	String ten;
 
 	String iconUrl;
-}
 
+	String moTa;
+
+	Boolean trangThai;
+}

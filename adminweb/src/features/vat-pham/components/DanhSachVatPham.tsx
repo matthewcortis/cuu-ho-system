@@ -34,9 +34,15 @@ function formatDate(value: string): string {
 }
 
 function getStatusLabel(status: VatPhamTrangThai): string {
-  return status === "san_sang" ? "San sang" : "Ngung cung cap";
+  switch (status) {
+    case "san_sang":
+      return "Sẵn sàng";
+    case "ngung_cung_cap":
+      return "Ngừng cung cấp";
+    default:
+      return "Không xác định";
+  }
 }
-
 export default function DanhSachVatPhamTable({ items }: DanhSachVatPhamTableProps) {
   return (
     <div className="overflow-hidden rounded-xl border border-gray-200 bg-white dark:border-white/[0.05] dark:bg-white/[0.03]">
@@ -48,43 +54,43 @@ export default function DanhSachVatPhamTable({ items }: DanhSachVatPhamTableProp
                 isHeader
                 className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
               >
-                Anh
+                Ảnh
               </TableCell>
               <TableCell
                 isHeader
                 className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
               >
-                Ten vat pham
+                Tên vật phẩm
               </TableCell>
               <TableCell
                 isHeader
                 className="px-4 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
               >
-                Nhom vat pham
+                Nhóm vật phẩm
               </TableCell>
               <TableCell
                 isHeader
                 className="px-4 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
               >
-                Don vi
+                Đơn vị
               </TableCell>
               <TableCell
                 isHeader
                 className="px-4 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
               >
-                So luong
+                Số lượng
               </TableCell>
               <TableCell
                 isHeader
                 className="px-4 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
               >
-                Trang thai
+                Trạng thái
               </TableCell>
               <TableCell
                 isHeader
                 className="px-4 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
               >
-                Ngay tao
+                Ngày tạo
               </TableCell>
             </TableRow>
           </TableHeader>
@@ -104,20 +110,25 @@ export default function DanhSachVatPhamTable({ items }: DanhSachVatPhamTableProp
                     />
                   </div>
                 </TableCell>
+
                 <TableCell className="px-5 py-4 text-start">
                   <p className="font-medium text-gray-800 text-theme-sm dark:text-white/90">
                     {item.tenVatPham}
                   </p>
                 </TableCell>
+
                 <TableCell className="px-4 py-3 text-gray-500 text-start text-theme-sm dark:text-gray-400">
                   {item.nhomVatPham}
                 </TableCell>
+
                 <TableCell className="px-4 py-3 text-gray-500 text-start text-theme-sm dark:text-gray-400">
                   {item.donVi}
                 </TableCell>
+
                 <TableCell className="px-4 py-3 text-gray-500 text-start text-theme-sm dark:text-gray-400">
                   {item.soLuong}
                 </TableCell>
+
                 <TableCell className="px-4 py-3 text-start">
                   <Badge
                     size="sm"
@@ -126,6 +137,7 @@ export default function DanhSachVatPhamTable({ items }: DanhSachVatPhamTableProp
                     {getStatusLabel(item.trangThai)}
                   </Badge>
                 </TableCell>
+
                 <TableCell className="px-4 py-3 text-gray-500 text-start text-theme-sm dark:text-gray-400">
                   {formatDate(item.createdAt)}
                 </TableCell>
@@ -138,7 +150,7 @@ export default function DanhSachVatPhamTable({ items }: DanhSachVatPhamTableProp
                   className="px-5 py-10 text-center text-gray-500 text-theme-sm dark:text-gray-400"
                   colSpan={7}
                 >
-                  Khong tim thay vat pham phu hop voi bo loc.
+                  Không tìm thấy vật phẩm phù hợp với bộ lọc.
                 </td>
               </TableRow>
             )}
@@ -148,5 +160,4 @@ export default function DanhSachVatPhamTable({ items }: DanhSachVatPhamTableProp
     </div>
   );
 }
-
 

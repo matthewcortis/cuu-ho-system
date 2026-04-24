@@ -13,12 +13,15 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.backend.cuutro.dto.request.CapNhatTrangThaiPhieuRequest;
+import com.backend.cuutro.dto.request.CapNhatDaXemTinNhanRequest;
 import com.backend.cuutro.dto.request.DieuPhoiPhieuRequest;
 import com.backend.cuutro.dto.request.GuiTinNhanPhieuRequest;
 import com.backend.cuutro.dto.request.TaoPhieuHoTroRequest;
 import com.backend.cuutro.dto.response.ResponseData;
 import com.backend.cuutro.dto.response.entities.PhanCongDto;
 import com.backend.cuutro.dto.response.entities.PhieuCuuTroDto;
+import com.backend.cuutro.dto.response.entities.TinNhanChuaDocResponse;
+import com.backend.cuutro.dto.response.entities.TinNhanDaXemResponse;
 import com.backend.cuutro.dto.response.entities.TinNhanDto;
 import com.backend.cuutro.dto.response.entities.TrangThaiPhieuResponse;
 import com.backend.cuutro.services.PhieuCuuTroService;
@@ -96,7 +99,7 @@ public class PhieuCuuTroController {
 			@PathVariable Long id,
 			@Valid @RequestBody GuiTinNhanPhieuRequest request,
 			HttpServletRequest httpRequest) {
-		TinNhanDto data = phieuCuuTroService.guiTinNhan(id, request.getNoiDung());
+		TinNhanDto data = phieuCuuTroService.guiTinNhan(id, request);
 		return ResponseEntity.status(HttpStatus.CREATED)
 				.body(buildResponse(HttpStatus.CREATED, "Gui tin nhan thanh cong", data, httpRequest));
 	}
@@ -109,6 +112,23 @@ public class PhieuCuuTroController {
 		return ResponseEntity.ok(buildResponse(HttpStatus.OK, "Fetched tin nhan list successfully", data, httpRequest));
 	}
 
+	@PutMapping("/{id}/tin-nhan/da-xem")
+	public ResponseEntity<ResponseData<TinNhanDaXemResponse>> capNhatDaXemTinNhan(
+			@PathVariable Long id,
+			@Valid @RequestBody CapNhatDaXemTinNhanRequest request,
+			HttpServletRequest httpRequest) {
+		TinNhanDaXemResponse data = phieuCuuTroService.capNhatDaXemTinNhan(id, request);
+		return ResponseEntity.ok(buildResponse(HttpStatus.OK, "Cap nhat da xem tin nhan thanh cong", data, httpRequest));
+	}
+
+	@GetMapping("/{id}/tin-nhan/chua-doc")
+	public ResponseEntity<ResponseData<TinNhanChuaDocResponse>> getTinNhanChuaDoc(
+			@PathVariable Long id,
+			HttpServletRequest httpRequest) {
+		TinNhanChuaDocResponse data = phieuCuuTroService.getTinNhanChuaDoc(id);
+		return ResponseEntity.ok(buildResponse(HttpStatus.OK, "Fetched tin nhan chua doc successfully", data, httpRequest));
+	}
+
 	private <T> ResponseData<T> buildResponse(HttpStatus status, String message, T data, HttpServletRequest request) {
 		return ResponseData.<T>builder()
 				.status(status.value())
@@ -119,4 +139,3 @@ public class PhieuCuuTroController {
 				.build();
 	}
 }
-

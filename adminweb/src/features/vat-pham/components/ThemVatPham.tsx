@@ -15,8 +15,8 @@ export interface ThemVatPhamItem {
   soLuong: number;
   donVi: string;
   donViId: number | null;
-  nhomVatPham: string;
-  nhomVatPhamId: number | null;
+  nhomVatPhamNames: string[];
+  nhomVatPhamIds: number[];
   imageUrl: string;
   imagePath: string;
   tepTinId: number | null;
@@ -139,7 +139,9 @@ export default function ThemVatPhamTable({
                     </p>
                   </TableCell>
                   <TableCell className="px-4 py-3 text-gray-500 text-start text-theme-sm dark:text-gray-400">
-                    {item.nhomVatPham}
+                    {item.nhomVatPhamNames.length > 0
+                      ? item.nhomVatPhamNames.join(", ")
+                      : "Chưa chọn nhóm"}
                   </TableCell>
                   <TableCell className="px-4 py-3 text-gray-500 text-start text-theme-sm dark:text-gray-400">
                     {item.soLuong}

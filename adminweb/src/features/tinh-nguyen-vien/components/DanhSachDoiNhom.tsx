@@ -141,37 +141,37 @@ export default function DanhSachDoiNhom({
                 isHeader
                 className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
               >
-                Doi truong
+                Đội trưởng
               </TableCell>
               <TableCell
                 isHeader
                 className="px-4 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
               >
-                Ten doi nhom
+                Tên đội nhóm
               </TableCell>
               <TableCell
                 isHeader
                 className="px-4 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
               >
-                Dia chi nhom
+                Khu vực hoạt động
               </TableCell>
               <TableCell
                 isHeader
                 className="px-4 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
               >
-                Thanh vien nhom
+                Thành viên nhóm
               </TableCell>
               <TableCell
                 isHeader
                 className="px-4 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
               >
-                Trang thai
+                Trạng thái
               </TableCell>
               <TableCell
                 isHeader
                 className="px-4 py-3 font-medium text-gray-500 text-center text-theme-xs dark:text-gray-400"
               >
-                Hanh dong
+                Hành động
               </TableCell>
             </TableRow>
           </TableHeader>
@@ -182,126 +182,124 @@ export default function DanhSachDoiNhom({
               const isUpdatingActive = updatingActiveTeamId === team.id;
 
               return (
-              <TableRow key={team.id}>
-                <TableCell className="px-5 py-4 sm:px-6 text-start">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 overflow-hidden rounded-full">
-                      <img
-                        width={40}
-                        height={40}
-                        src={team.doiTruong.avatarUrl}
-                        alt={team.doiTruong.ten}
-                        className="size-10 object-cover"
-                      />
-                    </div>
-                    <div>
-                      <span className="block font-medium text-gray-800 text-theme-sm dark:text-white/90">
-                        {team.doiTruong.ten}
-                      </span>
-                      <span className="block text-gray-500 text-theme-xs dark:text-gray-400">
-                        {getVaiTroLabel(team.doiTruong.vaiTro)}
-                      </span>
-                    </div>
-                  </div>
-                </TableCell>
-
-                <TableCell className="px-4 py-3 text-gray-500 text-start text-theme-sm dark:text-gray-400">
-                  {team.tenDoiNhom}
-                </TableCell>
-
-                <TableCell className="px-4 py-3 text-gray-500 text-start text-theme-sm dark:text-gray-400">
-                  {team.diaChi}
-                </TableCell>
-
-                <TableCell className="px-4 py-3 text-start">
-                  {team.thanhVien.length > 0 ? (
-                    <div className="flex items-center gap-2">
-                      <div className="flex -space-x-2">
-                        {team.thanhVien.slice(0, 4).map((member, index) => (
-                          <div
-                            key={`${member.ten}-${index}`}
-                            className="w-7 h-7 overflow-hidden border-2 border-white rounded-full dark:border-gray-900"
-                          >
-                            <img
-                              width={28}
-                              height={28}
-                              src={member.avatarUrl}
-                              alt={member.ten}
-                              className="size-7 object-cover"
-                            />
-                          </div>
-                        ))}
+                <TableRow key={team.id}>
+                  <TableCell className="px-5 py-4 sm:px-6 text-start">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 overflow-hidden rounded-full">
+                        <img
+                          width={40}
+                          height={40}
+                          src={team.doiTruong.avatarUrl}
+                          alt={team.doiTruong.ten}
+                          className="size-10 object-cover"
+                        />
                       </div>
-                      {team.thanhVien.length > 4 && (
-                        <span className="text-theme-xs text-gray-500 dark:text-gray-400">
-                          +{team.thanhVien.length - 4}
+                      <div>
+                        <span className="block font-medium text-gray-800 text-theme-sm dark:text-white/90">
+                          {team.doiTruong.ten}
                         </span>
+                        <span className="block text-gray-500 text-theme-xs dark:text-gray-400">
+                          {getVaiTroLabel(team.doiTruong.vaiTro)}
+                        </span>
+                      </div>
+                    </div>
+                  </TableCell>
+
+                  <TableCell className="px-4 py-3 text-gray-500 text-start text-theme-sm dark:text-gray-400">
+                    {team.tenDoiNhom}
+                  </TableCell>
+
+                  <TableCell className="px-4 py-3 text-gray-500 text-start text-theme-sm dark:text-gray-400">
+                    {team.diaChi}
+                  </TableCell>
+
+                  <TableCell className="px-4 py-3 text-start">
+                    {team.thanhVien.length > 0 ? (
+                      <div className="flex items-center gap-2">
+                        <div className="flex -space-x-2">
+                          {team.thanhVien.slice(0, 4).map((member, index) => (
+                            <div
+                              key={`${member.ten}-${index}`}
+                              className="w-7 h-7 overflow-hidden border-2 border-white rounded-full dark:border-gray-900"
+                            >
+                              <img
+                                width={28}
+                                height={28}
+                                src={member.avatarUrl}
+                                alt={member.ten}
+                                className="size-7 object-cover"
+                              />
+                            </div>
+                          ))}
+                        </div>
+                        {team.thanhVien.length > 4 && (
+                          <span className="text-theme-xs text-gray-500 dark:text-gray-400">
+                            +{team.thanhVien.length - 4}
+                          </span>
+                        )}
+                      </div>
+                    ) : (
+                      <span className="text-theme-sm text-gray-500 dark:text-gray-400">
+                        Chưa có thành viên
+                      </span>
+                    )}
+                  </TableCell>
+
+                  <TableCell className="px-4 py-3 text-start text-theme-sm dark:text-gray-400">
+                    {onChangeTeamActive ? (
+                      <div className="inline-flex min-w-[160px] flex-col gap-1">
+                        <select
+                          value={isActive ? "active" : "inactive"}
+                          disabled={isUpdatingActive}
+                          onChange={(event) => {
+                            const nextActive = event.target.value === "active";
+                            if (nextActive === isActive) return;
+                            handleChangeActive(team, nextActive);
+                          }}
+                          className="h-9 w-full rounded-lg border border-gray-300 bg-white px-3 text-xs text-gray-700 shadow-theme-xs focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 disabled:cursor-not-allowed disabled:opacity-70 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90"
+                        >
+                          <option value="active">Đang hoạt động</option>
+                          <option value="inactive">Tạm ngừng</option>
+                        </select>
+                        {isUpdatingActive && (
+                          <span className="text-xs text-gray-500 dark:text-gray-400">
+                            Đang cập nhật...
+                          </span>
+                        )}
+                      </div>
+                    ) : (
+                      <Badge size="sm" color={isActive ? "success" : "error"}>
+                        {isActive ? "Đang hoạt động" : "Tạm ngừng"}
+                      </Badge>
+                    )}
+                  </TableCell>
+
+                  <TableCell className="px-4 py-3">
+                    <div className="flex items-center justify-center gap-2">
+                      {onEditTeam && (
+                        <button
+                          type="button"
+                          onClick={() => handleEdit(team)}
+                          className="inline-flex items-center justify-center w-8 h-8 text-gray-600 border border-gray-200 rounded-lg hover:bg-gray-100 hover:text-gray-800 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-white/10 dark:hover:text-white"
+                          aria-label={`Sửa ${team.tenDoiNhom}`}
+                        >
+                          <PencilIcon className="size-4" />
+                        </button>
+                      )}
+
+                      {onDeleteTeam && (
+                        <button
+                          type="button"
+                          onClick={() => handleDelete(team)}
+                          className="inline-flex items-center justify-center w-8 h-8 text-error-600 border border-error-200 rounded-lg hover:bg-error-50 dark:border-error-500/30 dark:text-error-400 dark:hover:bg-error-500/10"
+                          aria-label={`Xóa ${team.tenDoiNhom}`}
+                        >
+                          <TrashBinIcon className="size-4" />
+                        </button>
                       )}
                     </div>
-                  ) : (
-                    <span className="text-theme-sm text-gray-500 dark:text-gray-400">
-                      Chua co thanh vien
-                    </span>
-                  )}
-                </TableCell>
-
-                <TableCell className="px-4 py-3 text-start text-theme-sm dark:text-gray-400">
-                  {onChangeTeamActive ? (
-                    <div className="inline-flex min-w-[160px] flex-col gap-1">
-                      <select
-                        value={isActive ? "active" : "inactive"}
-                        disabled={isUpdatingActive}
-                        onChange={(event) => {
-                          const nextActive = event.target.value === "active";
-                          if (nextActive === isActive) {
-                            return;
-                          }
-                          handleChangeActive(team, nextActive);
-                        }}
-                        className="h-9 w-full rounded-lg border border-gray-300 bg-white px-3 text-xs text-gray-700 shadow-theme-xs focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 disabled:cursor-not-allowed disabled:opacity-70 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90"
-                      >
-                        <option value="active">Dang hoat dong</option>
-                        <option value="inactive">Tam ngung</option>
-                      </select>
-                      {isUpdatingActive && (
-                        <span className="text-xs text-gray-500 dark:text-gray-400">
-                          Dang cap nhat...
-                        </span>
-                      )}
-                    </div>
-                  ) : (
-                    <Badge size="sm" color={isActive ? "success" : "error"}>
-                      {isActive ? "Dang hoat dong" : "Tam ngung"}
-                    </Badge>
-                  )}
-                </TableCell>
-
-                <TableCell className="px-4 py-3">
-                  <div className="flex items-center justify-center gap-2">
-                    {onEditTeam && (
-                      <button
-                        type="button"
-                        onClick={() => handleEdit(team)}
-                        className="inline-flex items-center justify-center w-8 h-8 text-gray-600 border border-gray-200 rounded-lg hover:bg-gray-100 hover:text-gray-800 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-white/10 dark:hover:text-white"
-                        aria-label={`Sua ${team.tenDoiNhom}`}
-                      >
-                        <PencilIcon className="size-4" />
-                      </button>
-                    )}
-
-                    {onDeleteTeam && (
-                      <button
-                        type="button"
-                        onClick={() => handleDelete(team)}
-                        className="inline-flex items-center justify-center w-8 h-8 text-error-600 border border-error-200 rounded-lg hover:bg-error-50 dark:border-error-500/30 dark:text-error-400 dark:hover:bg-error-500/10"
-                        aria-label={`Xoa ${team.tenDoiNhom}`}
-                      >
-                        <TrashBinIcon className="size-4" />
-                      </button>
-                    )}
-                  </div>
-                </TableCell>
-              </TableRow>
+                  </TableCell>
+                </TableRow>
               );
             })}
 
@@ -311,7 +309,7 @@ export default function DanhSachDoiNhom({
                   className="px-5 py-10 text-center text-gray-500 text-theme-sm dark:text-gray-400"
                   colSpan={6}
                 >
-                  Chua co doi nhom nao trong danh sach.
+                  Chưa có đội nhóm nào trong danh sách.
                 </td>
               </TableRow>
             )}

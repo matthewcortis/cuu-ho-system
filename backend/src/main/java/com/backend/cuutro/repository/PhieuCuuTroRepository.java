@@ -1,5 +1,6 @@
 package com.backend.cuutro.repository;
 
+import java.util.UUID;
 import java.util.List;
 
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -12,4 +13,6 @@ import com.backend.cuutro.entities.PhieuCuuTroEntity;
 public interface PhieuCuuTroRepository extends JpaRepository<PhieuCuuTroEntity, Long>, JpaSpecificationExecutor<PhieuCuuTroEntity> {
 
 	List<PhieuCuuTroEntity> findAllByOrderByCreatedAtDesc();
+
+	List<PhieuCuuTroEntity> findAllByNguoiDung_IdOrderByCreatedAtDesc(UUID nguoiDungId);
 }

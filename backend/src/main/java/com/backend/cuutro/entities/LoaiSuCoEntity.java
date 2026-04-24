@@ -2,15 +2,19 @@ package com.backend.cuutro.entities;
 
 import java.io.Serializable;
 import java.time.Instant;
+import java.util.LinkedHashSet;
+import java.util.Set;
 
 import org.hibernate.annotations.ColumnDefault;
 import org.hibernate.annotations.CreationTimestamp;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.ManyToMany;
 import jakarta.persistence.Table;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -39,6 +43,16 @@ public class LoaiSuCoEntity implements Serializable {
 
 	@Column(name = "icon_url")
 	private String iconUrl;
+
+	@Column(name = "mo_ta")
+	private String moTa;
+
+	@Column(name = "trang_thai")
+	private Boolean trangThai;
+
+	@Builder.Default
+	@ManyToMany(mappedBy = "loaiSuCos", fetch = FetchType.LAZY)
+	private Set<NhomVatPhamEntity> nhomVatPhams = new LinkedHashSet<>();
 
 	@CreationTimestamp
 	@ColumnDefault("CURRENT_TIMESTAMP")

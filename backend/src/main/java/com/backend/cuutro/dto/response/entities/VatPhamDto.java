@@ -2,6 +2,8 @@ package com.backend.cuutro.dto.response.entities;
 
 import java.io.Serializable;
 import java.time.Instant;
+import java.util.ArrayList;
+import java.util.List;
 
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
@@ -27,7 +29,8 @@ public class VatPhamDto implements Serializable {
 	String tenVatPham;
 	Short soLuong;
 	DonViDto donVi;
-	NhomVatPhamDto nhomVatPham;
+	@Builder.Default
+	List<NhomVatPhamLiteDto> nhomVatPhams = new ArrayList<>();
 	TepTinDto tepTin;
 	Boolean trangThai;
 	Instant createdAt;

@@ -1,6 +1,9 @@
 package com.backend.cuutro.dto.request;
 
+import java.util.List;
+
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Positive;
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -22,5 +25,8 @@ public class NhomVatPhamUpsertRequest {
 
 	String moTa;
 
+	@Positive(message = "loaiSuCoId must be greater than 0")
 	Long loaiSuCoId;
+
+	List<@Positive(message = "loaiSuCoIds must contain values greater than 0") Long> loaiSuCoIds;
 }

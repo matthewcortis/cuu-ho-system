@@ -7,6 +7,7 @@ import java.util.List;
 
 import javax.crypto.SecretKey;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.DisabledException;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -14,7 +15,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
-import com.backend.cuutro.constant.ConstantVariables;
 import com.backend.cuutro.constant.enums.RoleType;
 import com.backend.cuutro.dto.request.DangNhapRequest;
 import com.backend.cuutro.dto.response.entities.DangNhapResponse;
@@ -37,6 +37,9 @@ public class AuthServiceImpl implements AuthService {
 
 	private final TaiKhoanRepository taiKhoanRepository;
 	private final PasswordEncoder passwordEncoder;
+
+	@Value("${constant.key.signer-key:}")
+	private String signerKey;
 
 	@Override
 	public DangNhapResponse dangNhap(DangNhapRequest request) {
@@ -69,9 +72,8 @@ public class AuthServiceImpl implements AuthService {
 	}
 
 	private String taoJwtToken(TaiKhoanEntity taiKhoan, RoleType vaiTro, Instant issuedAt, Instant expiresAt) {
-		String signerKey = ConstantVariables.SIGNER_KEY;
 		if (!StringUtils.hasText(signerKey)) {
-			throw new IllegalStateException("SIGNER_KEY is not configured");
+			throw new IllegalStateException("Property constant.key.signer-key is not configured");
 		}
 
 		SecretKey secretKey = Keys.hmacShaKeyFor(signerKey.getBytes(StandardCharsets.UTF_8));
@@ -100,4 +102,3 @@ public class AuthServiceImpl implements AuthService {
 		return rawPassword.equals(storedPassword);
 	}
 }
-

@@ -32,6 +32,7 @@ interface TinhNguyenVienDto {
   ghiChu: string;
   coTheGiup: string;
   trangThaiDuyet: string;
+  thoiGianDuyet: string;
   createdAt: string;
 }
 
@@ -45,6 +46,19 @@ export interface TinhNguyenVienChoDuyetItem {
   kyNang: string;
   ghiChu: string;
   createdAt: string;
+}
+
+export interface TinhNguyenVienDaDuyetItem extends TinhNguyenVienChoDuyetItem {
+  trangThaiDuyet: string;
+  thoiGianDuyet: string;
+}
+
+export type VaiTroDoiNhom = "truong_nhom" | "pho_nhom" | "thanh_vien";
+
+export interface GanDoiNhomTinhNguyenVienRequest {
+  tinhNguyenVienId: number;
+  doiNhomId: number;
+  vaiTro?: VaiTroDoiNhom;
 }
 
 export class TinhNguyenVienApiError extends Error {
@@ -162,6 +176,7 @@ function parseTinhNguyenVienDto(value: unknown): TinhNguyenVienDto | null {
     ghiChu: typeof value.ghiChu === "string" ? value.ghiChu : "",
     coTheGiup: typeof value.coTheGiup === "string" ? value.coTheGiup : "",
     trangThaiDuyet: typeof value.trangThaiDuyet === "string" ? value.trangThaiDuyet : "",
+    thoiGianDuyet: typeof value.thoiGianDuyet === "string" ? value.thoiGianDuyet : "",
     createdAt: typeof value.createdAt === "string" ? value.createdAt : "",
   };
 }
@@ -184,6 +199,14 @@ function mapDtoToChoDuyetItem(dto: TinhNguyenVienDto): TinhNguyenVienChoDuyetIte
     kyNang: trimOrFallback(dto.coTheGiup, "Chua cap nhat"),
     ghiChu: trimOrFallback(dto.ghiChu, "Khong co ghi chu"),
     createdAt: dto.createdAt,
+  };
+}
+
+function mapDtoToDaDuyetItem(dto: TinhNguyenVienDto): TinhNguyenVienDaDuyetItem {
+  return {
+    ...mapDtoToChoDuyetItem(dto),
+    trangThaiDuyet: trimOrFallback(dto.trangThaiDuyet, "DUOC_DUYET"),
+    thoiGianDuyet: dto.thoiGianDuyet,
   };
 }
 
@@ -263,6 +286,39 @@ export async function fetchChoXetDuyetTinhNguyenVien(): Promise<TinhNguyenVienCh
   return parsedItems.map(mapDtoToChoDuyetItem);
 }
 
+export async function fetchDaDuyetTinhNguyenVien(): Promise<TinhNguyenVienDaDuyetItem[]> {
+  const authorization = getAuthHeaderOrThrow();
+  const envelope = await requestEnvelope<unknown[]>(
+    "/tinh-nguyen-vien?trangThaiDuyet=DUOC_DUYET",
+    {
+      method: "GET",
+      headers: {
+        Authorization: authorization,
+      },
+    }
+  );
+
+  if (!Array.isArray(envelope.data)) {
+    throw new TinhNguyenVienApiError(
+      "Backend khong tra ve danh sach tinh nguyen vien da duyet hop le",
+      envelope.status
+    );
+  }
+
+  const parsedItems = envelope.data
+    .map(parseTinhNguyenVienDto)
+    .filter((item): item is TinhNguyenVienDto => item !== null);
+
+  if (parsedItems.length === 0 && envelope.data.length > 0) {
+    throw new TinhNguyenVienApiError(
+      "Du lieu tinh nguyen vien da duyet tra ve khong hop le",
+      envelope.status
+    );
+  }
+
+  return parsedItems.map(mapDtoToDaDuyetItem);
+}
+
 export async function duyetTinhNguyenVien(id: number): Promise<TinhNguyenVienChoDuyetItem> {
   const authorization = getAuthHeaderOrThrow();
   const envelope = await requestEnvelope<unknown>(`/tinh-nguyen-vien/${id}/duyet`, {
@@ -290,5 +346,19 @@ export async function xoaTinhNguyenVien(id: number): Promise<void> {
     headers: {
       Authorization: authorization,
     },
+  });
+}
+
+export async function ganDoiNhomChoTinhNguyenVien(
+  request: GanDoiNhomTinhNguyenVienRequest
+): Promise<void> {
+  const authorization = getAuthHeaderOrThrow();
+  await requestEnvelope<unknown>("/tinh-nguyen-vien/gan-doi-nhom", {
+    method: "POST",
+    headers: {
+      Authorization: authorization,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(request),
   });
 }

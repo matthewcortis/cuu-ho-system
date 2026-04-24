@@ -172,6 +172,7 @@ CREATE TABLE public.tin_nhan (
   id bigint GENERATED ALWAYS AS IDENTITY NOT NULL,
   phieu_cuu_tro_id bigint,
   sender_id uuid,
+  vi_tri_id bigint,
   noi_dung text,
   created_at timestamp with time zone DEFAULT now(),
   loai_tin_nhan text DEFAULT 'text'::text,
@@ -179,7 +180,22 @@ CREATE TABLE public.tin_nhan (
   media_type text,
   CONSTRAINT tin_nhan_pkey PRIMARY KEY (id),
   CONSTRAINT tin_nhan_phieu_cuu_tro_id_fkey FOREIGN KEY (phieu_cuu_tro_id) REFERENCES public.phieu_cuu_tro(id),
+  CONSTRAINT tin_nhan_vi_tri_id_fkey FOREIGN KEY (vi_tri_id) REFERENCES public.vi_tri(id),
   CONSTRAINT tin_nhan_sender_id_fkey FOREIGN KEY (sender_id) REFERENCES public.nguoi_dung(id)
+);
+CREATE TABLE public.tin_nhan_da_xem (
+  id bigint GENERATED ALWAYS AS IDENTITY NOT NULL,
+  phieu_cuu_tro_id bigint NOT NULL,
+  nguoi_dung_id uuid NOT NULL,
+  last_seen_message_id bigint,
+  last_seen_at timestamp with time zone,
+  created_at timestamp with time zone DEFAULT now(),
+  updated_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT tin_nhan_da_xem_pkey PRIMARY KEY (id),
+  CONSTRAINT uk_tin_nhan_da_xem_phieu_nguoi_dung UNIQUE (phieu_cuu_tro_id, nguoi_dung_id),
+  CONSTRAINT tin_nhan_da_xem_phieu_cuu_tro_id_fkey FOREIGN KEY (phieu_cuu_tro_id) REFERENCES public.phieu_cuu_tro(id),
+  CONSTRAINT tin_nhan_da_xem_nguoi_dung_id_fkey FOREIGN KEY (nguoi_dung_id) REFERENCES public.nguoi_dung(id),
+  CONSTRAINT tin_nhan_da_xem_last_seen_message_id_fkey FOREIGN KEY (last_seen_message_id) REFERENCES public.tin_nhan(id)
 );
 CREATE TABLE public.tinh_nguyen_vien (
   id bigint GENERATED ALWAYS AS IDENTITY NOT NULL,
@@ -221,4 +237,3 @@ CREATE TABLE public.vi_tri (
   created_at timestamp with time zone DEFAULT now(),
   CONSTRAINT vi_tri_pkey PRIMARY KEY (id)
 );
-

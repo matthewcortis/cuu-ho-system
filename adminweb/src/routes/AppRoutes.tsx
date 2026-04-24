@@ -20,6 +20,7 @@ import BasicTables from "@/pages/Tables/BasicTables";
 import FormElements from "@/pages/Forms/FormElements";
 import Blank from "@/pages/Blank";
 import Home from "@/pages/Dashboard/Home";
+import ChatPage from "@/features/chat/pages/ChatPage";
 import TinhNguyenVien from "@/features/tinh-nguyen-vien/pages/TinhNguyenVien";
 import DuyetTinhNguyenVienPage from "@/features/tinh-nguyen-vien/pages/DuyetTinhNguyenVien";
 import DoiNhom from "@/features/tinh-nguyen-vien/pages/DoiNhom";
@@ -45,6 +46,7 @@ export default function AppRoutes() {
             <Route path="/profile" element={<UserProfiles />} />
             <Route path="/calendar" element={<Calendar />} />
             <Route path="/blank" element={<Blank />} />
+            <Route path="/chat" element={<ChatPage />} />
 
             <Route path="/ban-do" element={<BanDoPage />} />
             <Route path="/yeu-cau-phieu-cuu-tro" element={<YeuCauPhieuCuuTroPage />} />

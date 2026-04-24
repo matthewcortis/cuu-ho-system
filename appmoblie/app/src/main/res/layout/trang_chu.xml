@@ -9,7 +9,8 @@
     <FrameLayout
         android:id="@+id/trang_chu_fragment_container"
         android:layout_width="match_parent"
-        android:layout_height="match_parent" />
+        android:layout_height="match_parent"
+        android:layout_above="@id/layout_bottom_nav" />
 
     <LinearLayout
         android:id="@+id/layout_bottom_nav"

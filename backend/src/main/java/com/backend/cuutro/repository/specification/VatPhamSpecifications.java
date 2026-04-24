@@ -65,7 +65,12 @@ public final class VatPhamSpecifications {
 	}
 
 	public static Specification<VatPhamEntity> hasNhomVatPhamId(Long nhomVatPhamId) {
-		return (root, query, cb) -> cb.equal(root.join("nhomVatPham", JoinType.LEFT).get("id"), nhomVatPhamId);
+		return (root, query, cb) -> {
+			if (query != null) {
+				query.distinct(true);
+			}
+			return cb.equal(root.join("nhomVatPhams", JoinType.LEFT).get("id"), nhomVatPhamId);
+		};
 	}
 
 	public static Specification<VatPhamEntity> hasTrangThai(Boolean trangThai) {

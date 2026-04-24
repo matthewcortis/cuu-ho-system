@@ -45,6 +45,10 @@ public class TinNhanEntity implements Serializable {
 	@JoinColumn(name = "sender_id")
 	private NguoiDungEntity sender;
 
+	@ManyToOne(fetch = FetchType.LAZY)
+	@JoinColumn(name = "vi_tri_id")
+	private ViTriEntity viTri;
+
 	@Column(name = "noi_dung")
 	private String noiDung;
 

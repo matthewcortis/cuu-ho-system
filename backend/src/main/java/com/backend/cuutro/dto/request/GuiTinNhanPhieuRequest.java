@@ -1,6 +1,6 @@
 package com.backend.cuutro.dto.request;
 
-import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.Valid;
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -17,7 +17,12 @@ import lombok.experimental.FieldDefaults;
 @FieldDefaults(level = AccessLevel.PRIVATE)
 public class GuiTinNhanPhieuRequest {
 
-	@NotBlank(message = "noiDung is required")
 	String noiDung;
-}
 
+	Long tepTinId;
+
+	Long viTriId;
+
+	@Valid
+	ViTriInputRequest viTri;
+}

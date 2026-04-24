@@ -6,7 +6,7 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="@color/report_background"
-    tools:context=".SosActivity">
+    tools:context=".features.sos.ui.SosActivity">
 
     <androidx.constraintlayout.widget.Guideline
         android:id="@+id/guide_sos_hint_top"

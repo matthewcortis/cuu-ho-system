@@ -14,6 +14,7 @@ export interface LoaiSuCoDto {
   id: number;
   ten: string;
   iconUrl: string;
+  trangThai: boolean;
   createdAt: string;
 }
 
@@ -26,6 +27,7 @@ export interface TepTinLiteDto {
 export interface LoaiSuCoUpsertRequest {
   ten: string;
   iconUrl: string | null;
+  trangThai: boolean;
 }
 
 export interface LoaiSuCoIconUploadRequest {
@@ -89,6 +91,7 @@ function parseLoaiSuCoDto(value: unknown): LoaiSuCoDto | null {
     id: value.id,
     ten: typeof value.ten === "string" ? value.ten : "",
     iconUrl: typeof value.iconUrl === "string" ? value.iconUrl : "",
+    trangThai: typeof value.trangThai === "boolean" ? value.trangThai : true,
     createdAt: typeof value.createdAt === "string" ? value.createdAt : "",
   };
 }

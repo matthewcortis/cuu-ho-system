@@ -2,11 +2,11 @@ package com.backend.cuutro.entities;
 
 import java.io.Serializable;
 import java.time.Instant;
+import java.util.LinkedHashSet;
+import java.util.Set;
 
 import org.hibernate.annotations.ColumnDefault;
 import org.hibernate.annotations.CreationTimestamp;
-import org.hibernate.annotations.NotFound;
-import org.hibernate.annotations.NotFoundAction;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -15,7 +15,8 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
-import jakarta.persistence.ManyToOne;
+import jakarta.persistence.JoinTable;
+import jakarta.persistence.ManyToMany;
 import jakarta.persistence.Table;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -45,10 +46,17 @@ public class NhomVatPhamEntity implements Serializable {
 	@Column(name = "mo_ta")
 	private String moTa;
 
-	@ManyToOne(fetch = FetchType.LAZY)
-	@JoinColumn(name = "loai_su_co_id")
-	@NotFound(action = NotFoundAction.IGNORE)
-	private LoaiSuCoEntity loaiSuCo;
+	@Builder.Default
+	@ManyToMany(fetch = FetchType.LAZY)
+	@JoinTable(
+			name = "nhom_vat_pham_loai_su_co",
+			joinColumns = @JoinColumn(name = "nhom_vat_pham_id"),
+			inverseJoinColumns = @JoinColumn(name = "loai_su_co_id"))
+	private Set<LoaiSuCoEntity> loaiSuCos = new LinkedHashSet<>();
+
+	@Builder.Default
+	@ManyToMany(mappedBy = "nhomVatPhams", fetch = FetchType.LAZY)
+	private Set<VatPhamEntity> vatPhams = new LinkedHashSet<>();
 
 	@CreationTimestamp
 	@ColumnDefault("CURRENT_TIMESTAMP")

@@ -54,7 +54,7 @@
             android:layout_width="0dp"
             android:layout_height="50dp"
             android:layout_weight="1"
-            android:text="@string/account_details_cancel"
+            android:text="@string/account_details_delete_action"
             android:textAllCaps="false"
             android:textColor="@color/account_details_cancel_text"
             android:textSize="15sp"

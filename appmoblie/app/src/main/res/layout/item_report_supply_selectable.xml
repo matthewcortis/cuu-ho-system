@@ -1,0 +1,93 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_marginBottom="8dp"
+    android:layout_marginStart="8dp"
+    android:layout_marginEnd="8dp"
+    android:background="@drawable/bg_report_surface_rounded"
+    android:gravity="center_vertical"
+    android:minHeight="56dp"
+    android:orientation="horizontal"
+    android:paddingStart="10dp"
+    android:paddingTop="8dp"
+    android:paddingEnd="10dp"
+    android:paddingBottom="8dp">
+
+    <CheckBox
+        android:id="@+id/cbSupplySelect"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:buttonTint="@color/report_action_red" />
+
+    <ImageView
+        android:id="@+id/ivSupplyImage"
+        android:layout_width="40dp"
+        android:layout_height="40dp"
+        android:layout_marginStart="4dp"
+        android:background="@drawable/bg_report_attach_option"
+        android:contentDescription="@string/report_supply_item_image"
+        android:padding="6dp"
+        android:scaleType="centerCrop"
+        android:src="@drawable/ic_emergency_other" />
+
+    <TextView
+        android:id="@+id/tvSupplyName"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="10dp"
+        android:layout_weight="1"
+        android:maxLines="2"
+        android:textColor="@color/report_text_primary"
+        android:textSize="14sp"
+        android:textStyle="bold" />
+
+    <LinearLayout
+        android:id="@+id/layoutSupplyQuantityControls"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="8dp"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:visibility="gone">
+
+        <TextView
+            android:id="@+id/btnSupplyMinus"
+            android:layout_width="28dp"
+            android:layout_height="28dp"
+            android:background="@drawable/bg_report_qty_action"
+            android:clickable="true"
+            android:focusable="true"
+            android:gravity="center"
+            android:text="@string/report_supply_minus"
+            android:textColor="@color/report_action_red"
+            android:textSize="16sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:id="@+id/tvSupplySelectedQuantity"
+            android:layout_width="34dp"
+            android:layout_height="28dp"
+            android:layout_marginStart="6dp"
+            android:layout_marginEnd="6dp"
+            android:background="@drawable/bg_report_qty_badge"
+            android:gravity="center"
+            android:text="1"
+            android:textColor="@color/report_text_primary"
+            android:textSize="14sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:id="@+id/btnSupplyPlus"
+            android:layout_width="28dp"
+            android:layout_height="28dp"
+            android:background="@drawable/bg_report_qty_action"
+            android:clickable="true"
+            android:focusable="true"
+            android:gravity="center"
+            android:text="@string/report_supply_plus"
+            android:textColor="@color/report_action_red"
+            android:textSize="16sp"
+            android:textStyle="bold" />
+    </LinearLayout>
+</LinearLayout>

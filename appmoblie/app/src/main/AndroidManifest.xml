@@ -8,7 +8,7 @@
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
 
     <application
-        android:name=".MyApp"
+        android:name=".app.MyApp"
         android:allowBackup="true"
         android:dataExtractionRules="@xml/data_extraction_rules"
         android:fullBackupContent="@xml/backup_rules"
@@ -16,18 +16,31 @@
         android:label="@string/app_name"
         android:roundIcon="@drawable/iconapp"
         android:supportsRtl="true"
-        android:theme="@style/Theme.Cuutro">
+        android:theme="@style/Theme.Cuutro"
+        android:usesCleartextTraffic="${usesCleartextTraffic}">
         <activity
-            android:name=".SosActivity"
+            android:name=".features.report.ui.DetailReportActivity"
             android:exported="false" />
         <activity
-            android:name=".features.community.AddNewCommunityActivity"
+            android:name=".features.splash.ui.NotificationScreenActivity"
             android:exported="false" />
         <activity
-            android:name=".features.report.ReportActivity"
+            android:name=".features.setting.ui.SettingActivity"
             android:exported="false" />
         <activity
-            android:name=".SplashActivity"
+            android:name=".features.auth.ui.LoginActivity"
+            android:exported="false" />
+        <activity
+            android:name=".features.sos.ui.SosActivity"
+            android:exported="false" />
+        <activity
+            android:name=".features.community.ui.AddNewCommunityActivity"
+            android:exported="false" />
+        <activity
+            android:name=".features.report.ui.ReportActivity"
+            android:exported="false" />
+        <activity
+            android:name=".features.splash.ui.SplashActivity"
             android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
@@ -36,13 +49,13 @@
             </intent-filter>
         </activity>
         <activity
-            android:name=".MainActivity"
+            android:name=".features.main.ui.MainActivity"
             android:exported="false" />
         <activity
-            android:name=".features.profile.AccountDetailsActivity"
+            android:name=".features.profile.ui.AccountDetailsActivity"
             android:exported="false" />
         <activity
-            android:name=".HomeActivity"
+            android:name=".features.navigation.ui.NavActivity"
             android:exported="false" />
     </application>
 

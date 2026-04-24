@@ -28,12 +28,13 @@ function mapVatPhamDtoToItem(vatPham: VatPhamDto): DanhSachVatPhamItem {
   const soLuong = Number.isFinite(vatPham.soLuong) ? vatPham.soLuong : 0;
   const trangThai: VatPhamTrangThai = vatPham.trangThai ? "san_sang" : "ngung_cung_cap";
   const imageUrl = vatPham.tepTin?.duongDan?.trim() || null;
+  const nhomVatPhamDauTien = vatPham.nhomVatPhams[0] ?? null;
 
   return {
     id: vatPham.id,
     tenVatPham: vatPham.tenVatPham.trim() || "Chua dat ten",
-    nhomVatPhamId: vatPham.nhomVatPham?.id ?? null,
-    nhomVatPham: vatPham.nhomVatPham?.ten?.trim() || "Khong co nhom",
+    nhomVatPhamId: nhomVatPhamDauTien?.id ?? null,
+    nhomVatPham: nhomVatPhamDauTien?.ten?.trim() || "Khong co nhom",
     donVi: vatPham.donVi?.ten?.trim() || "Khong co don vi",
     soLuong,
     trangThai,
@@ -150,42 +151,42 @@ export default function DanhSachVatPhamPage() {
   return (
     <>
       <PageMeta
-        title="Danh sach vat pham"
-        description="Danh sach san pham theo nhom vat pham."
+        title="Danh sách vật phẩm"
+        description="Danh sách sản phẩm theo nhóm vật phẩm."
       />
-      <PageBreadcrumb pageTitle="Danh sach vat pham" />
+      <PageBreadcrumb pageTitle="Danh sách vật phẩm" />
       <div className="space-y-6">
         {loadError && (
           <div className="rounded-lg border border-warning-200 bg-warning-50 px-4 py-3 text-theme-sm text-warning-700 dark:border-warning-500/30 dark:bg-warning-500/10 dark:text-warning-300">
-            Khong the lay danh sach vat pham tu backend: {loadError}
+            Không thể lấy danh sách vật phẩm từ backend: {loadError}
           </div>
         )}
 
         <ComponentCard
-          title="Danh sach chi tiet vat pham"
-          desc="Tim kiem va loc theo danh sach."
+          title="Danh sách chi tiết vật phẩm"
+          desc="Tìm kiếm và lọc theo danh sách."
         >
           {isLoading && (
             <div className="mb-4 rounded-lg border border-brand-200 bg-brand-50 px-4 py-3 text-theme-sm text-brand-700 dark:border-brand-500/30 dark:bg-brand-500/10 dark:text-brand-300">
-              Dang tai danh sach vat pham...
+              Đang tải danh sách vật phẩm...
             </div>
           )}
 
           <div className="space-y-5">
             <div className="grid grid-cols-1 gap-4 lg:grid-cols-4">
               <div>
-                <Label htmlFor="search-vat-pham">Tim kiem san pham</Label>
+                <Label htmlFor="search-vat-pham">Tìm kiếm sản phẩm</Label>
                 <Input
                   id="search-vat-pham"
                   type="text"
-                  placeholder="Nhap ten san pham can tim"
+                  placeholder="Nhập tên sản phẩm cần tìm"
                   value={searchKeyword}
                   onChange={(event) => setSearchKeyword(event.target.value)}
                 />
               </div>
 
               <div>
-                <Label htmlFor="filter-nhom">Loc theo nhom vat pham</Label>
+                <Label htmlFor="filter-nhom">Lọc theo nhóm vật phẩm</Label>
                 <select
                   id="filter-nhom"
                   value={selectedNhomId}
@@ -196,7 +197,7 @@ export default function DanhSachVatPhamPage() {
                     value="all"
                     className="text-gray-700 dark:bg-gray-900 dark:text-gray-400"
                   >
-                    Tat ca nhom vat pham
+                    Tất cả nhóm vật phẩm
                   </option>
                   {nhomVatPhamOptions.map((option) => (
                     <option
@@ -211,7 +212,7 @@ export default function DanhSachVatPhamPage() {
               </div>
 
               <div>
-                <Label>Loc theo trang thai</Label>
+                <Label>Lọc theo trạng thái</Label>
                 <div className="flex flex-wrap items-center gap-2 rounded-lg border border-gray-200 p-2 dark:border-gray-700">
                   {statusOptions.map((option) => {
                     const isActive = statusFilter === option.value;
@@ -221,11 +222,10 @@ export default function DanhSachVatPhamPage() {
                         key={option.value}
                         type="button"
                         onClick={() => setStatusFilter(option.value)}
-                        className={`rounded-lg px-3 py-2 text-theme-xs font-medium transition ${
-                          isActive
+                        className={`rounded-lg px-3 py-2 text-theme-xs font-medium transition ${isActive
                             ? "bg-brand-500 text-white"
                             : "bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-white/[0.05] dark:text-gray-300 dark:hover:bg-white/[0.1]"
-                        }`}
+                          }`}
                       >
                         {option.label}
                       </button>
@@ -235,7 +235,7 @@ export default function DanhSachVatPhamPage() {
               </div>
 
               <div>
-                <Label htmlFor="danh-sach-vat-pham-rows-per-page">So dong/trang</Label>
+                <Label htmlFor="danh-sach-vat-pham-rows-per-page">Số dòng/trang</Label>
                 <select
                   id="danh-sach-vat-pham-rows-per-page"
                   value={rowsPerPage}
@@ -256,7 +256,7 @@ export default function DanhSachVatPhamPage() {
             </div>
 
             <p className="text-theme-xs text-gray-500 dark:text-gray-400">
-              Hien thi {paginatedItems.length}/{totalFilteredItems} vat pham (tong:{" "}
+              Hiển thị {paginatedItems.length}/{totalFilteredItems} vật phẩm (tổng:{" "}
               {allItems.length})
             </p>
 

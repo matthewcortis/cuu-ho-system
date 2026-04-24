@@ -7,6 +7,7 @@ import Pagination from "@/components/common/Pagination";
 import Label from "@/components/form/Label";
 import Input from "@/components/form/input/InputField";
 import Combobox, { type ComboboxOptionItem } from "@/components/form/Combobox";
+import MultiSelect from "@/components/form/MultiSelect";
 import ThemVatPhamTable, {
   type ThemVatPhamItem,
 } from "@/features/vat-pham/components/ThemVatPham";
@@ -36,7 +37,7 @@ interface FormErrors {
   soLuong: string;
   imageFile: string;
   donViId: string;
-  nhomVatPhamId: string;
+  nhomVatPhamIds: string;
 }
 
 interface SelectOption {
@@ -53,12 +54,13 @@ function getInitialErrors(): FormErrors {
     soLuong: "",
     imageFile: "",
     donViId: "",
-    nhomVatPhamId: "",
+    nhomVatPhamIds: "",
   };
 }
 
 function mapVatPhamDtoToItem(vatPham: VatPhamDto): ThemVatPhamItem {
   const imageUrl = vatPham.tepTin?.duongDan?.trim() || "";
+  const nhomVatPhams = vatPham.nhomVatPhams;
 
   return {
     id: vatPham.id,
@@ -66,8 +68,8 @@ function mapVatPhamDtoToItem(vatPham: VatPhamDto): ThemVatPhamItem {
     soLuong: Number.isFinite(vatPham.soLuong) ? vatPham.soLuong : 0,
     donVi: vatPham.donVi?.ten?.trim() || "Chưa chọn đơn vị",
     donViId: vatPham.donVi?.id ?? null,
-    nhomVatPham: vatPham.nhomVatPham?.ten?.trim() || "Chưa chọn nhóm",
-    nhomVatPhamId: vatPham.nhomVatPham?.id ?? null,
+    nhomVatPhamNames: nhomVatPhams.map((item) => item.ten?.trim() || `Nhóm #${item.id}`),
+    nhomVatPhamIds: nhomVatPhams.map((item) => item.id),
     imageUrl,
     imagePath: imageUrl,
     tepTinId: vatPham.tepTin?.id ?? null,
@@ -96,7 +98,7 @@ export default function ThemVatPhamPage() {
   const [donViOptions, setDonViOptions] = useState<SelectOption[]>([]);
   const [nhomVatPhamOptions, setNhomVatPhamOptions] = useState<SelectOption[]>([]);
   const [selectedDonViId, setSelectedDonViId] = useState("");
-  const [selectedNhomVatPhamId, setSelectedNhomVatPhamId] = useState("");
+  const [selectedNhomVatPhamIds, setSelectedNhomVatPhamIds] = useState<string[]>([]);
   const [selectedImageFile, setSelectedImageFile] = useState<File | null>(null);
   const [selectedImagePreviewUrl, setSelectedImagePreviewUrl] = useState("");
   const [selectedImageStoragePath, setSelectedImageStoragePath] = useState("");
@@ -200,9 +202,16 @@ export default function ThemVatPhamPage() {
     };
   }, []);
 
-  const selectedNhomVatPhamLabel =
-    nhomVatPhamOptions.find((item) => item.value === selectedNhomVatPhamId)?.label ||
-    "";
+  const selectedNhomVatPhamLabels = useMemo(
+    () =>
+      selectedNhomVatPhamIds
+        .map(
+          (selectedId) =>
+            nhomVatPhamOptions.find((item) => item.value === selectedId)?.label || null
+        )
+        .filter((label): label is string => Boolean(label)),
+    [nhomVatPhamOptions, selectedNhomVatPhamIds]
+  );
 
   const tepTinCount = useMemo(
     () => items.filter((item) => item.tepTinId !== null).length,
@@ -223,12 +232,11 @@ export default function ThemVatPhamPage() {
       })),
     [donViOptions]
   );
-  const nhomVatPhamComboboxOptions = useMemo<ComboboxOptionItem[]>(
+  const nhomVatPhamMultiSelectOptions = useMemo(
     () =>
       nhomVatPhamOptions.map((option) => ({
         value: option.value,
-        label: option.label,
-        searchText: option.label,
+        text: option.label,
       })),
     [nhomVatPhamOptions]
   );
@@ -319,11 +327,11 @@ export default function ThemVatPhamPage() {
     }));
   };
 
-  const handleSelectNhomVatPham = (value: string) => {
-    setSelectedNhomVatPhamId(value);
+  const handleSelectNhomVatPham = (values: string[]) => {
+    setSelectedNhomVatPhamIds(values);
     setErrors((prev) => ({
       ...prev,
-      nhomVatPhamId: "",
+      nhomVatPhamIds: "",
     }));
   };
 
@@ -334,7 +342,7 @@ export default function ThemVatPhamPage() {
     });
     setEditingItemId(null);
     setSelectedDonViId("");
-    setSelectedNhomVatPhamId("");
+    setSelectedNhomVatPhamIds([]);
     setErrors(getInitialErrors());
     clearSelectedImage(options?.revokeImage ?? true);
   };
@@ -370,8 +378,8 @@ export default function ThemVatPhamPage() {
     if (!selectedDonViId) {
       nextErrors.donViId = "Vui lòng chọn đơn vị.";
     }
-    if (!selectedNhomVatPhamId) {
-      nextErrors.nhomVatPhamId = "Vui lòng chọn nhóm vật phẩm.";
+    if (selectedNhomVatPhamIds.length === 0) {
+      nextErrors.nhomVatPhamIds = "Vui lòng chọn ít nhất một nhóm vật phẩm.";
     }
 
     setErrors(nextErrors);
@@ -380,7 +388,7 @@ export default function ThemVatPhamPage() {
       nextErrors.soLuong ||
       nextErrors.imageFile ||
       nextErrors.donViId ||
-      nextErrors.nhomVatPhamId
+      nextErrors.nhomVatPhamIds
     ) {
       return;
     }
@@ -402,7 +410,7 @@ export default function ThemVatPhamPage() {
           tenVatPham,
           soLuong,
           donViId: Number(selectedDonViId),
-          nhomVatPhamId: Number(selectedNhomVatPhamId),
+          nhomVatPhamIds: selectedNhomVatPhamIds.map(Number),
           tepTinId,
           trangThai: editingItem?.trangThai ?? true,
         });
@@ -435,7 +443,7 @@ export default function ThemVatPhamPage() {
         tenVatPham,
         soLuong,
         donViId: Number(selectedDonViId),
-        nhomVatPhamId: Number(selectedNhomVatPhamId),
+        nhomVatPhamIds: selectedNhomVatPhamIds.map(Number),
         anhVatPham: imageFile,
         trangThai: true,
       });
@@ -460,7 +468,7 @@ export default function ThemVatPhamPage() {
     if (isSubmitting) {
       return;
     }
-    if (item.donViId === null || item.nhomVatPhamId === null) {
+    if (item.donViId === null || item.nhomVatPhamIds.length === 0) {
       showActionToast(
         "error",
         "Không thể chỉnh sửa",
@@ -476,7 +484,7 @@ export default function ThemVatPhamPage() {
       soLuong: String(item.soLuong),
     });
     setSelectedDonViId(String(item.donViId));
-    setSelectedNhomVatPhamId(String(item.nhomVatPhamId));
+    setSelectedNhomVatPhamIds(item.nhomVatPhamIds.map(String));
     setErrors(getInitialErrors());
   };
 
@@ -512,7 +520,7 @@ export default function ThemVatPhamPage() {
     if (isSubmitting) {
       return;
     }
-    if (item.donViId === null || item.nhomVatPhamId === null) {
+    if (item.donViId === null || item.nhomVatPhamIds.length === 0) {
       showActionToast(
         "error",
         "Không thể cập nhật trạng thái",
@@ -528,7 +536,7 @@ export default function ThemVatPhamPage() {
         tenVatPham: item.tenVatPham,
         soLuong: item.soLuong,
         donViId: item.donViId,
-        nhomVatPhamId: item.nhomVatPhamId,
+        nhomVatPhamIds: item.nhomVatPhamIds,
         tepTinId: item.tepTinId ?? null,
         trangThai: !item.trangThai,
       });
@@ -737,30 +745,29 @@ export default function ThemVatPhamPage() {
               </div>
 
               <div>
-                <Label htmlFor="nhom-vat-pham-combobox">Thêm vào nhóm vật phẩm</Label>
-                <Combobox
-                  id="nhom-vat-pham-combobox"
-                  value={selectedNhomVatPhamId}
-                  options={nhomVatPhamComboboxOptions}
+                <MultiSelect
+                  label="Thêm vào nhóm vật phẩm"
+                  value={selectedNhomVatPhamIds}
+                  options={nhomVatPhamMultiSelectOptions}
                   onChange={handleSelectNhomVatPham}
                   placeholder={
                     isLoading
                       ? "Dang tai danh sach nhom vat pham..."
-                      : "Chon nhom vat pham"
+                      : "Chon mot hoac nhieu nhom vat pham"
                   }
                   disabled={isLoading || isSubmitting}
-                  error={Boolean(errors.nhomVatPhamId)}
-                  hint={errors.nhomVatPhamId}
-                  emptyMessage="Khong tim thay nhom vat pham phu hop."
                 />
+                {errors.nhomVatPhamIds && (
+                  <p className="mt-1.5 text-xs text-error-500">{errors.nhomVatPhamIds}</p>
+                )}
               </div>
             </div>
 
-            {selectedNhomVatPhamLabel && (
+            {selectedNhomVatPhamLabels.length > 0 && (
               <p className="text-theme-sm text-gray-600 dark:text-gray-300">
-                Vật phẩm sẽ được thêm vào nhóm:
+                Vật phẩm sẽ được thêm vào các nhóm:
                 <span className="ml-1 font-medium text-brand-600 dark:text-brand-400">
-                  {selectedNhomVatPhamLabel}
+                  {selectedNhomVatPhamLabels.join(", ")}
                 </span>
               </p>
             )}

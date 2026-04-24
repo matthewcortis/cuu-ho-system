@@ -9,6 +9,7 @@ import ActionToast, {
 } from "@/components/common/ActionToast";
 import Label from "@/components/form/Label";
 import Input from "@/components/form/input/InputField";
+import Checkbox from "@/components/form/input/Checkbox";
 import LoaiSuCoTable, {
   type LoaiSuCoItem,
 } from "@/features/loai_su_co/components/loai_su_co";
@@ -25,6 +26,7 @@ import {
 interface LoaiSuCoFormValues {
   ten: string;
   iconUrl: string;
+  trangThai: boolean;
 }
 
 interface LoaiSuCoFormErrors {
@@ -35,6 +37,7 @@ interface LoaiSuCoFormErrors {
 const defaultFormValues: LoaiSuCoFormValues = {
   ten: "",
   iconUrl: "",
+  trangThai: true,
 };
 
 const defaultFormErrors: LoaiSuCoFormErrors = {
@@ -47,6 +50,7 @@ function mapLoaiSuCoDtoToItem(loaiSuCo: LoaiSuCoDto): LoaiSuCoItem {
     id: loaiSuCo.id,
     ten: loaiSuCo.ten.trim() || "Chua dat ten",
     iconUrl: loaiSuCo.iconUrl.trim(),
+    trangThai: Boolean(loaiSuCo.trangThai),
     createdAt: loaiSuCo.createdAt,
   };
 }
@@ -315,6 +319,7 @@ export default function LoaiSuCoPage() {
         const updated = await updateLoaiSuCo(editingId, {
           ten,
           iconUrl: iconUrl || null,
+          trangThai: formValues.trangThai,
         });
         const updatedItem = mapLoaiSuCoDtoToItem(updated);
         setItems((prev) =>
@@ -335,6 +340,7 @@ export default function LoaiSuCoPage() {
       const created = await createLoaiSuCo({
         ten,
         iconUrl: iconUrl || null,
+        trangThai: formValues.trangThai,
       });
       const createdItem = mapLoaiSuCoDtoToItem(created);
       setItems((prev) => [createdItem, ...prev.filter((item) => item.id !== createdItem.id)]);
@@ -357,6 +363,7 @@ export default function LoaiSuCoPage() {
     setFormValues({
       ten: item.ten,
       iconUrl: item.iconUrl,
+      trangThai: item.trangThai,
     });
     setFormErrors(defaultFormErrors);
   };
@@ -460,6 +467,21 @@ export default function LoaiSuCoPage() {
                   )}
                 </div>
               </div>
+            </div>
+
+            <div className="rounded-lg border border-gray-200 bg-gray-50 px-4 py-3 dark:border-gray-800 dark:bg-gray-900/40">
+              <Checkbox
+                id="trang-thai-loai-su-co"
+                checked={formValues.trangThai}
+                onChange={(checked) =>
+                  setFormValues((prev) => ({
+                    ...prev,
+                    trangThai: checked,
+                  }))
+                }
+                disabled={isMutating || isUploadingIcon}
+                label={formValues.trangThai ? "Trạng thái: Đang bật" : "Trạng thái: Đang tắt"}
+              />
             </div>
 
             <div className="flex flex-wrap items-center gap-3">

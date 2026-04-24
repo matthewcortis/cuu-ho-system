@@ -1,4 +1,5 @@
 import { PencilIcon, TrashBinIcon } from "@/icons";
+import Badge from "@/components/ui/badge/Badge";
 import {
   Table,
   TableBody,
@@ -11,6 +12,7 @@ export interface LoaiSuCoItem {
   id: number;
   ten: string;
   iconUrl: string;
+  trangThai: boolean;
   createdAt: string;
 }
 
@@ -36,7 +38,7 @@ export default function LoaiSuCoTable({
   return (
     <div className="overflow-hidden rounded-xl border border-gray-200 bg-white dark:border-white/[0.05] dark:bg-white/[0.03]">
       <div className="max-w-full overflow-x-auto custom-scrollbar">
-        <Table className="min-w-[880px]">
+        <Table className="min-w-[980px]">
           <TableHeader className="border-b border-gray-100 dark:border-white/[0.05]">
             <TableRow>
               <TableCell
@@ -62,6 +64,12 @@ export default function LoaiSuCoTable({
                 className="px-4 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
               >
                 Ngày tạo
+              </TableCell>
+              <TableCell
+                isHeader
+                className="px-4 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
+              >
+                Trạng thái
               </TableCell>
               <TableCell
                 isHeader
@@ -112,6 +120,12 @@ export default function LoaiSuCoTable({
                   {formatDate(item.createdAt)}
                 </TableCell>
 
+                <TableCell className="px-4 py-3 text-start">
+                  <Badge color={item.trangThai ? "success" : "error"} size="sm">
+                    {item.trangThai ? "Đang bật" : "Đang tắt"}
+                  </Badge>
+                </TableCell>
+
                 <TableCell className="px-4 py-3">
                   <div className="flex items-center justify-center gap-2">
                     <button
@@ -139,7 +153,7 @@ export default function LoaiSuCoTable({
               <TableRow>
                 <td
                   className="px-5 py-10 text-center text-gray-500 text-theme-sm dark:text-gray-400"
-                  colSpan={5}
+                  colSpan={6}
                 >
                   Chưa có loại sự cố nào.
                 </td>

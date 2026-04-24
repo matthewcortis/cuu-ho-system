@@ -25,8 +25,10 @@ public class TaoPhieuHoTroRequest {
 	@NotNull(message = "loaiSuCoId is required")
 	Long loaiSuCoId;
 
-	@NotNull(message = "viTriId is required")
 	Long viTriId;
+
+	@Valid
+	ViTriInputRequest viTri;
 
 	/**
 	 * Backward-compatible single attachment id.

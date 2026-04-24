@@ -11,6 +11,8 @@ export interface NhomVatPhamItem {
   id: number;
   ten: string;
   moTa: string;
+  loaiSuCoIds: number[];
+  loaiSuCoNames: string[];
   soLuongVatPham: number;
   createdAt: string;
 }
@@ -54,6 +56,12 @@ export default function NhomVatPham({
                 isHeader
                 className="px-4 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
               >
+                Loại sự cố
+              </TableCell>
+              <TableCell
+                isHeader
+                className="px-4 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
+              >
                 Số lượng
               </TableCell>
               <TableCell
@@ -81,6 +89,22 @@ export default function NhomVatPham({
                 </TableCell>
                 <TableCell className="px-4 py-3 text-gray-500 text-start text-theme-sm dark:text-gray-400">
                   {item.moTa || "Chưa có mô tả"}
+                </TableCell>
+                <TableCell className="px-4 py-3 text-start">
+                  {item.loaiSuCoNames.length > 0 ? (
+                    <div className="flex flex-wrap gap-2">
+                      {item.loaiSuCoNames.map((name) => (
+                        <span
+                          key={`${item.id}-${name}`}
+                          className="inline-flex items-center rounded-full bg-brand-50 px-2.5 py-1 text-theme-xs font-medium text-brand-700 dark:bg-brand-500/20 dark:text-brand-200"
+                        >
+                          {name}
+                        </span>
+                      ))}
+                    </div>
+                  ) : (
+                    <span className="text-gray-400 dark:text-gray-500">Chưa chọn loại sự cố</span>
+                  )}
                 </TableCell>
                 <TableCell className="px-4 py-3 text-gray-500 text-start text-theme-sm dark:text-gray-400">
                   {item.soLuongVatPham}
@@ -115,7 +139,7 @@ export default function NhomVatPham({
               <TableRow>
                 <td
                   className="px-5 py-10 text-center text-gray-500 text-theme-sm dark:text-gray-400"
-                  colSpan={5}
+                  colSpan={6}
                 >
                   Chua co nhom vat pham nao trong danh sach.
                 </td>
@@ -127,5 +151,4 @@ export default function NhomVatPham({
     </div>
   );
 }
-
 

@@ -2,6 +2,8 @@ package com.backend.cuutro.dto.response.entities;
 
 import java.io.Serializable;
 import java.time.Instant;
+import java.util.ArrayList;
+import java.util.List;
 
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
@@ -26,6 +28,10 @@ public class LoaiSuCoDto implements Serializable {
 	Long id;
 	String ten;
 	String iconUrl;
+	String moTa;
+	Boolean trangThai;
+	@Builder.Default
+	List<NhomVatPhamLiteDto> nhomVatPhams = new ArrayList<>();
 	Instant createdAt;
 
 }

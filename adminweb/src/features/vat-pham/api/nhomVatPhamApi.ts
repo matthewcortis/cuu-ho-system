@@ -12,8 +12,10 @@ interface ResponseData<T> {
 
 interface LoaiSuCoDto {
   id: number;
-  tenLoaiSuCo: string;
+  ten: string;
   moTa: string;
+  iconUrl: string;
+  trangThai: boolean;
   createdAt: string;
 }
 
@@ -22,6 +24,7 @@ export interface NhomVatPhamDto {
   ten: string;
   moTa: string;
   loaiSuCo: LoaiSuCoDto | null;
+  loaiSuCos: LoaiSuCoDto[];
   createdAt: string;
 }
 
@@ -29,6 +32,7 @@ export interface NhomVatPhamUpsertRequest {
   ten: string;
   moTa: string | null;
   loaiSuCoId: number | null;
+  loaiSuCoIds: number[];
 }
 
 export class NhomVatPhamApiError extends Error {
@@ -85,8 +89,15 @@ function parseLoaiSuCo(value: unknown): LoaiSuCoDto | null {
 
   return {
     id: value.id,
-    tenLoaiSuCo: typeof value.tenLoaiSuCo === "string" ? value.tenLoaiSuCo : "",
+    ten:
+      typeof value.ten === "string"
+        ? value.ten
+        : typeof value.tenLoaiSuCo === "string"
+          ? value.tenLoaiSuCo
+          : "",
     moTa: typeof value.moTa === "string" ? value.moTa : "",
+    iconUrl: typeof value.iconUrl === "string" ? value.iconUrl : "",
+    trangThai: typeof value.trangThai === "boolean" ? value.trangThai : true,
     createdAt: typeof value.createdAt === "string" ? value.createdAt : "",
   };
 }
@@ -100,21 +111,35 @@ function parseNhomVatPhamDto(value: unknown): NhomVatPhamDto | null {
     return null;
   }
 
+  const loaiSuCoListValue = value.loaiSuCos;
+  const loaiSuCoList = Array.isArray(loaiSuCoListValue)
+    ? loaiSuCoListValue
+        .map(parseLoaiSuCo)
+        .filter((item): item is LoaiSuCoDto => item !== null)
+    : [];
+
+  if (Array.isArray(loaiSuCoListValue) && loaiSuCoList.length !== loaiSuCoListValue.length) {
+    return null;
+  }
+
   const loaiSuCoValue = value.loaiSuCo;
-  const loaiSuCo =
+  const parsedLoaiSuCo =
     loaiSuCoValue === null || loaiSuCoValue === undefined
       ? null
       : parseLoaiSuCo(loaiSuCoValue);
 
-  if (loaiSuCoValue !== null && loaiSuCoValue !== undefined && !loaiSuCo) {
+  if (loaiSuCoValue !== null && loaiSuCoValue !== undefined && !parsedLoaiSuCo) {
     return null;
   }
+
+  const loaiSuCo = parsedLoaiSuCo ?? loaiSuCoList[0] ?? null;
 
   return {
     id: value.id,
     ten: typeof value.ten === "string" ? value.ten : "",
     moTa: typeof value.moTa === "string" ? value.moTa : "",
     loaiSuCo,
+    loaiSuCos: loaiSuCoList,
     createdAt: typeof value.createdAt === "string" ? value.createdAt : "",
   };
 }

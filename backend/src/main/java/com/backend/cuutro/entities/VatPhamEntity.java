@@ -2,6 +2,8 @@ package com.backend.cuutro.entities;
 
 import java.io.Serializable;
 import java.time.Instant;
+import java.util.LinkedHashSet;
+import java.util.Set;
 
 import org.hibernate.annotations.ColumnDefault;
 import org.hibernate.annotations.CreationTimestamp;
@@ -15,6 +17,8 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
+import jakarta.persistence.JoinTable;
+import jakarta.persistence.ManyToMany;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import lombok.AllArgsConstructor;
@@ -50,10 +54,13 @@ public class VatPhamEntity implements Serializable {
 	@NotFound(action = NotFoundAction.IGNORE)
 	private DonViEntity donVi;
 
-	@ManyToOne(fetch = FetchType.LAZY)
-	@JoinColumn(name = "nhom_vat_pham_id")
-	@NotFound(action = NotFoundAction.IGNORE)
-	private NhomVatPhamEntity nhomVatPham;
+	@Builder.Default
+	@ManyToMany(fetch = FetchType.LAZY)
+	@JoinTable(
+			name = "vat_pham_nhom_vat_pham",
+			joinColumns = @JoinColumn(name = "vat_pham_id"),
+			inverseJoinColumns = @JoinColumn(name = "nhom_vat_pham_id"))
+	private Set<NhomVatPhamEntity> nhomVatPhams = new LinkedHashSet<>();
 
 	@ManyToOne(fetch = FetchType.LAZY)
 	@JoinColumn(name = "tep_tin_id")

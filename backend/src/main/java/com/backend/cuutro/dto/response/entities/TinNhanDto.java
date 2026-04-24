@@ -26,6 +26,7 @@ public class TinNhanDto implements Serializable {
 	Long id;
 	PhieuCuuTroDto phieuCuuTro;
 	NguoiDungDto sender;
+	ViTriDto viTri;
 	String noiDung;
 	Instant createdAt;
 	String loaiTinNhan;

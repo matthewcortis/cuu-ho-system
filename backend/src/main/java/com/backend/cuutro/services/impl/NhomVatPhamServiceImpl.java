@@ -1,6 +1,10 @@
 package com.backend.cuutro.services.impl;
 
 import java.util.List;
+import java.util.LinkedHashSet;
+import java.util.Map;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
@@ -10,6 +14,7 @@ import com.backend.cuutro.dto.request.NhomVatPhamUpsertRequest;
 import com.backend.cuutro.dto.response.entities.NhomVatPhamDto;
 import com.backend.cuutro.entities.LoaiSuCoEntity;
 import com.backend.cuutro.entities.NhomVatPhamEntity;
+import com.backend.cuutro.exception.customize.InvalidFieldException;
 import com.backend.cuutro.mapper.NhomVatPhamMapper;
 import com.backend.cuutro.repository.LoaiSuCoRepository;
 import com.backend.cuutro.repository.NhomVatPhamRepository;
@@ -68,14 +73,40 @@ public class NhomVatPhamServiceImpl implements NhomVatPhamService {
 	private void applyRequest(NhomVatPhamEntity entity, NhomVatPhamUpsertRequest request) {
 		entity.setTen(request.getTen().trim());
 		entity.setMoTa(request.getMoTa() == null ? null : request.getMoTa().trim());
-		entity.setLoaiSuCo(getLoaiSuCoOrNull(request.getLoaiSuCoId()));
+		entity.setLoaiSuCos(resolveLoaiSuCos(request));
 	}
 
-	private LoaiSuCoEntity getLoaiSuCoOrNull(Long loaiSuCoId) {
-		if (loaiSuCoId == null) {
-			return null;
+	private Set<LoaiSuCoEntity> resolveLoaiSuCos(NhomVatPhamUpsertRequest request) {
+		LinkedHashSet<Long> loaiSuCoIds = new LinkedHashSet<>();
+		if (request.getLoaiSuCoIds() != null) {
+			for (Long loaiSuCoId : request.getLoaiSuCoIds()) {
+				if (loaiSuCoId != null) {
+					loaiSuCoIds.add(loaiSuCoId);
+				}
+			}
 		}
-		return loaiSuCoRepository.findById(loaiSuCoId)
-				.orElseThrow(() -> new EntityNotFoundException("LoaiSuCo not found with id=" + loaiSuCoId));
+		if (request.getLoaiSuCoId() != null) {
+			loaiSuCoIds.add(request.getLoaiSuCoId());
+		}
+		if (loaiSuCoIds.isEmpty()) {
+			throw new InvalidFieldException("loaiSuCoIds is required");
+		}
+
+		List<LoaiSuCoEntity> loaiSuCoEntities = loaiSuCoRepository.findAllById(loaiSuCoIds);
+		Map<Long, LoaiSuCoEntity> loaiSuCoById = loaiSuCoEntities.stream()
+				.collect(Collectors.toMap(LoaiSuCoEntity::getId, item -> item));
+
+		List<Long> missingIds = loaiSuCoIds.stream()
+				.filter(id -> !loaiSuCoById.containsKey(id))
+				.toList();
+		if (!missingIds.isEmpty()) {
+			throw new EntityNotFoundException("LoaiSuCo not found with ids=" + missingIds);
+		}
+
+		LinkedHashSet<LoaiSuCoEntity> result = new LinkedHashSet<>();
+		for (Long loaiSuCoId : loaiSuCoIds) {
+			result.add(loaiSuCoById.get(loaiSuCoId));
+		}
+		return result;
 	}
 }

@@ -2,6 +2,7 @@ package com.backend.cuutro.controller;
 
 import java.util.List;
 
+import org.springframework.data.domain.Page;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -13,6 +14,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.backend.cuutro.dto.request.BaseFilterRequest;
 import com.backend.cuutro.dto.request.LoaiSuCoUpsertRequest;
 import com.backend.cuutro.dto.response.ResponseData;
 import com.backend.cuutro.dto.response.entities.LoaiSuCoDto;
@@ -71,6 +73,15 @@ public class LoaiSuCoController {
 				buildResponse(HttpStatus.OK, "Fetched loai su co list successfully", data, httpRequest));
 	}
 
+	@PostMapping("/filter")
+	public ResponseEntity<ResponseData<Page<LoaiSuCoDto>>> filter(
+			@RequestBody(required = false) BaseFilterRequest request,
+			HttpServletRequest httpRequest) {
+		Page<LoaiSuCoDto> data = loaiSuCoService.filter(request);
+		return ResponseEntity.ok(
+				buildResponse(HttpStatus.OK, "Filtered loai su co list successfully", data, httpRequest));
+	}
+
 	private <T> ResponseData<T> buildResponse(HttpStatus status, String message, T data, HttpServletRequest request) {
 		return ResponseData.<T>builder()
 				.status(status.value())
@@ -81,4 +92,3 @@ public class LoaiSuCoController {
 				.build();
 	}
 }
-

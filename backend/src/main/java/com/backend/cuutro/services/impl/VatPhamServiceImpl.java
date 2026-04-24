@@ -2,8 +2,13 @@ package com.backend.cuutro.services.impl;
 
 import java.text.Normalizer;
 import java.time.Instant;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
+import java.util.Set;
 
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -20,7 +25,7 @@ import com.backend.cuutro.dto.request.VatPhamCreateWithImageRequest;
 import com.backend.cuutro.dto.request.VatPhamFilterRequest;
 import com.backend.cuutro.dto.request.VatPhamUpsertRequest;
 import com.backend.cuutro.dto.response.entities.DonViDto;
-import com.backend.cuutro.dto.response.entities.NhomVatPhamDto;
+import com.backend.cuutro.dto.response.entities.NhomVatPhamLiteDto;
 import com.backend.cuutro.dto.response.entities.TepTinDto;
 import com.backend.cuutro.dto.response.entities.VatPhamDto;
 import com.backend.cuutro.entities.DonViEntity;
@@ -84,7 +89,7 @@ public class VatPhamServiceImpl implements VatPhamService {
 				request.getTenVatPham(),
 				request.getSoLuong(),
 				request.getDonViId(),
-				request.getNhomVatPhamId(),
+				request.getNhomVatPhamIds(),
 				request.getTrangThai());
 		entity.setTepTin(createTepTinFromImage(request));
 		return vatPhamMapper.toDto(vatPhamRepository.save(entity));
@@ -140,11 +145,6 @@ public class VatPhamServiceImpl implements VatPhamService {
 	private DonViEntity getDonViOrThrow(Long id) {
 		return donViRepository.findById(id)
 				.orElseThrow(() -> new EntityNotFoundException("DonVi not found with id=" + id));
-	}
-
-	private NhomVatPhamEntity getNhomVatPhamOrThrow(Long id) {
-		return nhomVatPhamRepository.findById(id)
-				.orElseThrow(() -> new EntityNotFoundException("NhomVatPham not found with id=" + id));
 	}
 
 	private TepTinEntity getTepTinOrThrow(Long id) {
@@ -203,12 +203,12 @@ public class VatPhamServiceImpl implements VatPhamService {
 			String tenVatPham,
 			Short soLuong,
 			Long donViId,
-			Long nhomVatPhamId,
+			List<Long> nhomVatPhamIds,
 			Boolean trangThai) {
 		entity.setTenVatPham(tenVatPham.trim());
 		entity.setSoLuong(soLuong);
 		entity.setDonVi(getDonViOrThrow(donViId));
-		entity.setNhomVatPham(getNhomVatPhamOrThrow(nhomVatPhamId));
+		entity.setNhomVatPhams(resolveNhomVatPhams(nhomVatPhamIds));
 		entity.setTrangThai(trangThai == null ? Boolean.TRUE : trangThai);
 	}
 
@@ -218,9 +218,51 @@ public class VatPhamServiceImpl implements VatPhamService {
 				request.getTenVatPham(),
 				request.getSoLuong(),
 				request.getDonViId(),
-				request.getNhomVatPhamId(),
+				request.getNhomVatPhamIds(),
 				request.getTrangThai());
 		entity.setTepTin(request.getTepTinId() == null ? null : getTepTinOrThrow(request.getTepTinId()));
+	}
+
+	private Set<NhomVatPhamEntity> resolveNhomVatPhams(List<Long> nhomVatPhamIds) {
+		if (nhomVatPhamIds == null || nhomVatPhamIds.isEmpty()) {
+			throw new InvalidFieldException("Vui long chon it nhat mot nhom vat pham.");
+		}
+
+		LinkedHashSet<Long> uniqueIds = new LinkedHashSet<>();
+		for (Long nhomVatPhamId : nhomVatPhamIds) {
+			if (nhomVatPhamId == null) {
+				continue;
+			}
+			uniqueIds.add(nhomVatPhamId);
+		}
+		if (uniqueIds.isEmpty()) {
+			throw new InvalidFieldException("Vui long chon it nhat mot nhom vat pham.");
+		}
+
+		List<NhomVatPhamEntity> foundGroups = nhomVatPhamRepository.findAllById(uniqueIds);
+		Map<Long, NhomVatPhamEntity> foundById = new LinkedHashMap<>();
+		for (NhomVatPhamEntity foundGroup : foundGroups) {
+			if (foundGroup == null || foundGroup.getId() == null) {
+				continue;
+			}
+			foundById.put(foundGroup.getId(), foundGroup);
+		}
+
+		List<Long> missingIds = new ArrayList<>();
+		LinkedHashSet<NhomVatPhamEntity> orderedGroups = new LinkedHashSet<>();
+		for (Long id : uniqueIds) {
+			NhomVatPhamEntity group = foundById.get(id);
+			if (group == null) {
+				missingIds.add(id);
+				continue;
+			}
+			orderedGroups.add(group);
+		}
+
+		if (!missingIds.isEmpty()) {
+			throw new EntityNotFoundException("NhomVatPham not found with ids=" + missingIds);
+		}
+		return orderedGroups;
 	}
 
 	private List<VatPhamDto> getAllFallbackByJdbc() {
@@ -239,60 +281,77 @@ public class VatPhamServiceImpl implements VatPhamService {
 				       tt.loai_tep_tin AS tt_loai_tep_tin
 				FROM vat_pham vp
 				LEFT JOIN don_vi dv ON dv.id = vp.don_vi_id
-				LEFT JOIN nhom_vat_pham nvp ON nvp.id = vp.nhom_vat_pham_id
+				LEFT JOIN vat_pham_nhom_vat_pham vp_nvp ON vp_nvp.vat_pham_id = vp.id
+				LEFT JOIN nhom_vat_pham nvp ON nvp.id = vp_nvp.nhom_vat_pham_id
 				LEFT JOIN tep_tin tt ON tt.id = vp.tep_tin_id
-				ORDER BY vp.id DESC
+				ORDER BY vp.id DESC, nvp.id ASC
 				""";
 
-		return jdbcTemplate.query(sql, (rs, rowNum) -> {
-			Long donViId = rs.getObject("dv_id", Long.class);
-			Long nhomVatPhamId = rs.getObject("nvp_id", Long.class);
-			Long tepTinId = rs.getObject("tt_id", Long.class);
+		Map<Long, VatPhamDto> vatPhamById = new LinkedHashMap<>();
+		Map<Long, Set<Long>> nhomIdsByVatPhamId = new LinkedHashMap<>();
 
-			DonViDto donVi = donViId == null
-					? null
-					: DonViDto.builder()
-							.id(donViId)
-							.ten(rs.getString("dv_ten"))
-							.maDonVi(null)
-							.createdAt(null)
-							.build();
-			NhomVatPhamDto nhomVatPham = nhomVatPhamId == null
-					? null
-					: NhomVatPhamDto.builder()
-							.id(nhomVatPhamId)
-							.ten(rs.getString("nvp_ten"))
-							.moTa(null)
-							.loaiSuCo(null)
-							.createdAt(null)
-							.build();
-			TepTinDto tepTin = tepTinId == null
-					? null
-					: TepTinDto.builder()
-							.id(tepTinId)
-							.duongDan(rs.getString("tt_duong_dan"))
-							.loaiTepTin(rs.getString("tt_loai_tep_tin"))
-							.createdAt(null)
-							.build();
+		jdbcTemplate.query(sql, rs -> {
+			Long vatPhamId = rs.getLong("vp_id");
+			if (!vatPhamById.containsKey(vatPhamId)) {
+				Long donViId = rs.getObject("dv_id", Long.class);
+				Long tepTinId = rs.getObject("tt_id", Long.class);
 
-			Short soLuong = rs.getObject("vp_so_luong", Short.class);
-			Boolean trangThai = rs.getObject("vp_trang_thai", Boolean.class);
-			Instant createdAt = null;
-			java.sql.Timestamp createdAtTimestamp = rs.getTimestamp("vp_created_at");
-			if (createdAtTimestamp != null) {
-				createdAt = createdAtTimestamp.toInstant();
+				DonViDto donVi = donViId == null
+						? null
+						: DonViDto.builder()
+								.id(donViId)
+								.ten(rs.getString("dv_ten"))
+								.maDonVi(null)
+								.createdAt(null)
+								.build();
+				TepTinDto tepTin = tepTinId == null
+						? null
+						: TepTinDto.builder()
+								.id(tepTinId)
+								.duongDan(rs.getString("tt_duong_dan"))
+								.loaiTepTin(rs.getString("tt_loai_tep_tin"))
+								.createdAt(null)
+								.build();
+
+				Short soLuong = rs.getObject("vp_so_luong", Short.class);
+				Boolean trangThai = rs.getObject("vp_trang_thai", Boolean.class);
+				Instant createdAt = null;
+				java.sql.Timestamp createdAtTimestamp = rs.getTimestamp("vp_created_at");
+				if (createdAtTimestamp != null) {
+					createdAt = createdAtTimestamp.toInstant();
+				}
+
+				vatPhamById.put(
+						vatPhamId,
+						VatPhamDto.builder()
+								.id(vatPhamId)
+								.tenVatPham(rs.getString("vp_ten_vat_pham"))
+								.soLuong(soLuong)
+								.donVi(donVi)
+								.tepTin(tepTin)
+								.trangThai(trangThai)
+								.createdAt(createdAt)
+								.build());
+				nhomIdsByVatPhamId.put(vatPhamId, new LinkedHashSet<>());
 			}
 
-			return VatPhamDto.builder()
-					.id(rs.getLong("vp_id"))
-					.tenVatPham(rs.getString("vp_ten_vat_pham"))
-					.soLuong(soLuong)
-					.donVi(donVi)
-					.nhomVatPham(nhomVatPham)
-					.tepTin(tepTin)
-					.trangThai(trangThai)
-					.createdAt(createdAt)
-					.build();
+			Long nhomVatPhamId = rs.getObject("nvp_id", Long.class);
+			if (nhomVatPhamId == null) {
+				return;
+			}
+
+			Set<Long> seenNhomIds = nhomIdsByVatPhamId.computeIfAbsent(vatPhamId, key -> new LinkedHashSet<>());
+			if (seenNhomIds.add(nhomVatPhamId)) {
+				NhomVatPhamLiteDto nhomVatPham = NhomVatPhamLiteDto.builder()
+						.id(nhomVatPhamId)
+						.ten(rs.getString("nvp_ten"))
+						.moTa(null)
+						.createdAt(null)
+						.build();
+				vatPhamById.get(vatPhamId).getNhomVatPhams().add(nhomVatPham);
+			}
 		});
+
+		return new ArrayList<>(vatPhamById.values());
 	}
 }

@@ -1,11 +1,13 @@
 package com.backend.cuutro.services;
 
 import java.util.ArrayList;
+import java.time.Instant;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -22,7 +24,10 @@ import com.backend.cuutro.constant.enums.RoleType;
 import com.backend.cuutro.constant.enums.TrangThaiDoiNhom;
 import com.backend.cuutro.constant.enums.TrangThaiPhieuHoTro;
 import com.backend.cuutro.dto.request.CapNhatTrangThaiPhieuRequest;
+import com.backend.cuutro.dto.request.CapNhatDaXemTinNhanRequest;
+import com.backend.cuutro.dto.request.CapNhatTrangThaiDangGoTinNhanRequest;
 import com.backend.cuutro.dto.request.DieuPhoiPhieuRequest;
+import com.backend.cuutro.dto.request.GuiTinNhanPhieuRequest;
 import com.backend.cuutro.dto.request.NguoiGuiRequest;
 import com.backend.cuutro.dto.request.PhieuCuuTroFilterRequest;
 import com.backend.cuutro.dto.request.TaoChiTietCuuTroRequest;
@@ -32,6 +37,9 @@ import com.backend.cuutro.dto.response.entities.NguoiGuiDto;
 import com.backend.cuutro.dto.response.entities.PhanCongDto;
 import com.backend.cuutro.dto.response.entities.PhieuCuuTroChiTietDto;
 import com.backend.cuutro.dto.response.entities.PhieuCuuTroDto;
+import com.backend.cuutro.dto.response.entities.TrangThaiDangGoTinNhanResponse;
+import com.backend.cuutro.dto.response.entities.TinNhanChuaDocResponse;
+import com.backend.cuutro.dto.response.entities.TinNhanDaXemResponse;
 import com.backend.cuutro.dto.response.entities.TinNhanDto;
 import com.backend.cuutro.dto.response.entities.TrangThaiPhieuResponse;
 import com.backend.cuutro.entities.ChiTietCuuTroEntity;
@@ -40,7 +48,10 @@ import com.backend.cuutro.entities.NguoiDungEntity;
 import com.backend.cuutro.entities.PhanCongEntity;
 import com.backend.cuutro.entities.PhieuCuuTroEntity;
 import com.backend.cuutro.entities.PhieuCuuTroTepTinEntity;
+import com.backend.cuutro.entities.TepTinEntity;
+import com.backend.cuutro.entities.TinNhanDaXemEntity;
 import com.backend.cuutro.entities.TinNhanEntity;
+import com.backend.cuutro.entities.ViTriEntity;
 import com.backend.cuutro.exception.customize.InvalidFieldException;
 import com.backend.cuutro.mapper.PhanCongMapper;
 import com.backend.cuutro.mapper.PhieuCuuTroMapper;
@@ -54,6 +65,7 @@ import com.backend.cuutro.repository.PhanCongRepository;
 import com.backend.cuutro.repository.PhieuCuuTroRepository;
 import com.backend.cuutro.repository.PhieuCuuTroTepTinRepository;
 import com.backend.cuutro.repository.TepTinRepository;
+import com.backend.cuutro.repository.TinNhanDaXemRepository;
 import com.backend.cuutro.repository.TinNhanRepository;
 import com.backend.cuutro.repository.VatPhamRepository;
 import com.backend.cuutro.repository.ViTriRepository;
@@ -75,6 +87,10 @@ public class PhieuCuuTroService {
 	private static final String PHIEU_TRANG_THAI_PROCESSING_DB = "processing";
 	private static final String PHIEU_TRANG_THAI_DONE_DB = "done";
 	private static final String LOAI_TEP_TIN_MAC_DINH = "general";
+	private static final String LOAI_TIN_NHAN_TEXT = "text";
+	private static final String LOAI_TIN_NHAN_MEDIA = "media";
+	private static final String LOAI_TIN_NHAN_LOCATION = "location";
+	private static final String LOAI_TIN_NHAN_MIXED = "mixed";
 	private static final List<String> TRANG_THAI_PHIEU_KET_THUC = List.of(
 			TrangThaiPhieuHoTro.HOAN_THANH.name(),
 			TrangThaiPhieuHoTro.HUY.name());
@@ -91,6 +107,9 @@ public class PhieuCuuTroService {
 	private final VatPhamRepository vatPhamRepository;
 	private final NguoiDungRepository nguoiDungRepository;
 	private final TinNhanRepository tinNhanRepository;
+	private final TinNhanDaXemRepository tinNhanDaXemRepository;
+	private final ViTriCommandService viTriCommandService;
+	private final TinNhanRealtimePublisher tinNhanRealtimePublisher;
 	private final PhieuCuuTroMapper phieuCuuTroMapper;
 	private final PhanCongMapper phanCongMapper;
 	private final TinNhanMapper tinNhanMapper;
@@ -101,8 +120,7 @@ public class PhieuCuuTroService {
 		ResolvedNguoiGui resolvedNguoiGui = resolveNguoiGui(request.getNguoiGui());
 		entity.setLoaiSuCo(loaiSuCoRepository.findById(request.getLoaiSuCoId())
 				.orElseThrow(() -> new EntityNotFoundException("LoaiSuCo not found with id=" + request.getLoaiSuCoId())));
-		entity.setViTri(viTriRepository.findById(request.getViTriId())
-				.orElseThrow(() -> new EntityNotFoundException("ViTri not found with id=" + request.getViTriId())));
+		entity.setViTri(resolveViTriTaoPhieu(request));
 		entity.setNguoiDung(resolvedNguoiGui.nguoiDung());
 		entity.setHoTen(resolvedNguoiGui.ten());
 		entity.setSdt(resolvedNguoiGui.sdt());
@@ -215,7 +233,7 @@ public class PhieuCuuTroService {
 	}
 
 	public List<PhieuCuuTroDto> getDanhSach() {
-		List<PhieuCuuTroEntity> entities = phieuCuuTroRepository.findAllByOrderByCreatedAtDesc();
+		List<PhieuCuuTroEntity> entities = resolveDanhSachPhieuTheoNguoiDungHienTai();
 		List<PhieuCuuTroDto> dtoList = phieuCuuTroMapper.toDtoList(entities);
 		for (int i = 0; i < entities.size(); i++) {
 			PhieuCuuTroEntity entity = entities.get(i);
@@ -224,37 +242,202 @@ public class PhieuCuuTroService {
 					phanCongRepository.findByPhieuCuuTro_Id(entity.getId()).orElse(null));
 			dtoList.get(i).setNguoiGui(buildNguoiGuiDto(entity));
 			dtoList.get(i).setTrangThai(trangThai.name());
+			dtoList.get(i).setChiTietCuuTro(
+					toChiTietDtos(chiTietCuuTroRepository.findByPhieuCuuTro_IdOrderByIdAsc(entity.getId())));
 		}
 		return dtoList;
 	}
 
+	private List<PhieuCuuTroEntity> resolveDanhSachPhieuTheoNguoiDungHienTai() {
+		Set<String> roles = getCurrentRoles();
+		if (roles.contains(RoleType.ADMIN.name())) {
+			return phieuCuuTroRepository.findAllByOrderByCreatedAtDesc();
+		}
+		if (roles.contains(RoleType.NGUOI_DAN.name())) {
+			Long taiKhoanId = getCurrentTaiKhoanIdOrThrow();
+			NguoiDungEntity nguoiDung = getNguoiDungByTaiKhoanIdOrThrow(taiKhoanId);
+			return phieuCuuTroRepository.findAllByNguoiDung_IdOrderByCreatedAtDesc(nguoiDung.getId());
+		}
+		return phieuCuuTroRepository.findAllByOrderByCreatedAtDesc();
+	}
+
 	@Transactional
-	public TinNhanDto guiTinNhan(Long phieuId, String noiDung) {
-		if (!StringUtils.hasText(noiDung)) {
-			throw new InvalidFieldException("noiDung is required");
+	public TinNhanDto guiTinNhan(Long phieuId, GuiTinNhanPhieuRequest request) {
+		Long taiKhoanId = getCurrentTaiKhoanIdOrThrow();
+		return guiTinNhan(phieuId, request, taiKhoanId, getCurrentRoles());
+	}
+
+	@Transactional
+	public TinNhanDto guiTinNhan(Long phieuId, GuiTinNhanPhieuRequest request, Long taiKhoanId, Set<String> roles) {
+		if (request == null) {
+			throw new InvalidFieldException("request is required");
+		}
+		if (taiKhoanId == null) {
+			throw new BadCredentialsException("Unauthorized");
+		}
+		String noiDung = StringUtils.hasText(request.getNoiDung()) ? request.getNoiDung().trim() : null;
+		TepTinEntity tepTin = resolveTepTinGuiTinNhan(request);
+		ViTriEntity viTri = resolveViTriGuiTinNhan(request);
+
+		boolean coNoiDung = StringUtils.hasText(noiDung);
+		boolean coMedia = tepTin != null;
+		boolean coViTri = viTri != null;
+		if (!coNoiDung && !coMedia && !coViTri) {
+			throw new InvalidFieldException("Tin nhan phai co it nhat mot trong cac truong: noiDung, tepTinId, viTriId, viTri");
 		}
 
 		PhieuCuuTroEntity phieu = getPhieuOrThrow(phieuId);
-		Long taiKhoanId = getCurrentTaiKhoanIdOrThrow();
 		NguoiDungEntity sender = getNguoiDungByTaiKhoanIdOrThrow(taiKhoanId);
-		validateCoQuyenChat(phieu, sender);
+		validateCoQuyenChat(phieu, sender, roles);
 
 		TinNhanEntity entity = new TinNhanEntity();
 		entity.setPhieuCuuTro(phieu);
 		entity.setSender(sender);
-		entity.setNoiDung(noiDung.trim());
-		entity.setLoaiTinNhan("text");
-		entity.setMediaUrl(null);
-		entity.setMediaType(null);
-		return tinNhanMapper.toDto(tinNhanRepository.save(entity));
+		entity.setViTri(viTri);
+		entity.setNoiDung(noiDung);
+		entity.setLoaiTinNhan(resolveLoaiTinNhan(coNoiDung, coMedia, coViTri));
+		entity.setMediaUrl(tepTin != null ? tepTin.getDuongDan() : null);
+		entity.setMediaType(tepTin != null ? tepTin.getLoaiTepTin() : null);
+		TinNhanDto tinNhanDto = tinNhanMapper.toDto(tinNhanRepository.save(entity));
+		tinNhanRealtimePublisher.publishTinNhan(phieuId, tinNhanDto);
+		return tinNhanDto;
 	}
 
 	public List<TinNhanDto> getDanhSachTinNhan(Long phieuId) {
-		PhieuCuuTroEntity phieu = getPhieuOrThrow(phieuId);
 		Long taiKhoanId = getCurrentTaiKhoanIdOrThrow();
+		return getDanhSachTinNhan(phieuId, taiKhoanId, getCurrentRoles());
+	}
+
+	public List<TinNhanDto> getDanhSachTinNhan(Long phieuId, Long taiKhoanId, Set<String> roles) {
+		if (taiKhoanId == null) {
+			throw new BadCredentialsException("Unauthorized");
+		}
+		PhieuCuuTroEntity phieu = getPhieuOrThrow(phieuId);
 		NguoiDungEntity sender = getNguoiDungByTaiKhoanIdOrThrow(taiKhoanId);
-		validateCoQuyenChat(phieu, sender);
+		validateCoQuyenChat(phieu, sender, roles);
 		return tinNhanMapper.toDtoList(tinNhanRepository.findByPhieuCuuTro_IdOrderByCreatedAtAsc(phieuId));
+	}
+
+	public void validateCoQuyenChat(Long phieuId, Long taiKhoanId, Set<String> roles) {
+		if (taiKhoanId == null) {
+			throw new BadCredentialsException("Unauthorized");
+		}
+		PhieuCuuTroEntity phieu = getPhieuOrThrow(phieuId);
+		NguoiDungEntity sender = getNguoiDungByTaiKhoanIdOrThrow(taiKhoanId);
+		validateCoQuyenChat(phieu, sender, roles);
+	}
+
+	@Transactional
+	public TinNhanDaXemResponse capNhatDaXemTinNhan(Long phieuId, CapNhatDaXemTinNhanRequest request) {
+		Long taiKhoanId = getCurrentTaiKhoanIdOrThrow();
+		return capNhatDaXemTinNhan(phieuId, request, taiKhoanId, getCurrentRoles());
+	}
+
+	@Transactional
+	public TinNhanDaXemResponse capNhatDaXemTinNhan(
+			Long phieuId,
+			CapNhatDaXemTinNhanRequest request,
+			Long taiKhoanId,
+			Set<String> roles) {
+		if (request == null) {
+			throw new InvalidFieldException("request is required");
+		}
+		if (request.getLastSeenMessageId() == null || request.getLastSeenMessageId() <= 0) {
+			throw new InvalidFieldException("lastSeenMessageId is required");
+		}
+		if (taiKhoanId == null) {
+			throw new BadCredentialsException("Unauthorized");
+		}
+
+		PhieuCuuTroEntity phieu = getPhieuOrThrow(phieuId);
+		NguoiDungEntity nguoiDung = getNguoiDungByTaiKhoanIdOrThrow(taiKhoanId);
+		validateCoQuyenChat(phieu, nguoiDung, roles);
+
+		TinNhanEntity lastSeenTinNhan = tinNhanRepository.findById(request.getLastSeenMessageId())
+				.orElseThrow(() -> new EntityNotFoundException("TinNhan not found with id=" + request.getLastSeenMessageId()));
+		if (lastSeenTinNhan.getPhieuCuuTro() == null
+				|| !Objects.equals(lastSeenTinNhan.getPhieuCuuTro().getId(), phieuId)) {
+			throw new InvalidFieldException("Tin nhan khong thuoc phieu cuu tro hien tai");
+		}
+
+		TinNhanDaXemEntity tinNhanDaXem = tinNhanDaXemRepository
+				.findByPhieuCuuTro_IdAndNguoiDung_Id(phieuId, nguoiDung.getId())
+				.orElseGet(() -> {
+					TinNhanDaXemEntity entity = new TinNhanDaXemEntity();
+					entity.setPhieuCuuTro(phieu);
+					entity.setNguoiDung(nguoiDung);
+					return entity;
+				});
+		Instant now = Instant.now();
+		tinNhanDaXem.setLastSeenMessage(lastSeenTinNhan);
+		tinNhanDaXem.setLastSeenAt(now);
+		TinNhanDaXemEntity saved = tinNhanDaXemRepository.save(tinNhanDaXem);
+
+		TinNhanDaXemResponse response = TinNhanDaXemResponse.builder()
+				.phieuId(phieuId)
+				.nguoiDungId(nguoiDung.getId())
+				.lastSeenMessageId(saved.getLastSeenMessage() != null ? saved.getLastSeenMessage().getId() : null)
+				.lastSeenAt(saved.getLastSeenAt())
+				.build();
+		tinNhanRealtimePublisher.publishTinNhanDaXem(phieuId, response);
+		return response;
+	}
+
+	public TinNhanChuaDocResponse getTinNhanChuaDoc(Long phieuId) {
+		Long taiKhoanId = getCurrentTaiKhoanIdOrThrow();
+		return getTinNhanChuaDoc(phieuId, taiKhoanId, getCurrentRoles());
+	}
+
+	public TinNhanChuaDocResponse getTinNhanChuaDoc(Long phieuId, Long taiKhoanId, Set<String> roles) {
+		if (taiKhoanId == null) {
+			throw new BadCredentialsException("Unauthorized");
+		}
+
+		PhieuCuuTroEntity phieu = getPhieuOrThrow(phieuId);
+		NguoiDungEntity nguoiDung = getNguoiDungByTaiKhoanIdOrThrow(taiKhoanId);
+		validateCoQuyenChat(phieu, nguoiDung, roles);
+
+		TinNhanDaXemEntity tinNhanDaXem = tinNhanDaXemRepository
+				.findByPhieuCuuTro_IdAndNguoiDung_Id(phieuId, nguoiDung.getId())
+				.orElse(null);
+		Long lastSeenMessageId = tinNhanDaXem != null && tinNhanDaXem.getLastSeenMessage() != null
+				? tinNhanDaXem.getLastSeenMessage().getId()
+				: null;
+		Instant lastSeenAt = tinNhanDaXem != null ? tinNhanDaXem.getLastSeenAt() : null;
+		long soLuongChuaDoc = tinNhanDaXemRepository.countTinNhanChuaDoc(phieuId, nguoiDung.getId(), lastSeenMessageId);
+		return TinNhanChuaDocResponse.builder()
+				.phieuId(phieuId)
+				.nguoiDungId(nguoiDung.getId())
+				.soLuongChuaDoc(soLuongChuaDoc)
+				.lastSeenMessageId(lastSeenMessageId)
+				.lastSeenAt(lastSeenAt)
+				.build();
+	}
+
+	public TrangThaiDangGoTinNhanResponse capNhatTrangThaiDangGoTinNhan(
+			Long phieuId,
+			CapNhatTrangThaiDangGoTinNhanRequest request,
+			Long taiKhoanId,
+			Set<String> roles) {
+		if (request == null || request.getDangGo() == null) {
+			throw new InvalidFieldException("dangGo is required");
+		}
+		if (taiKhoanId == null) {
+			throw new BadCredentialsException("Unauthorized");
+		}
+
+		PhieuCuuTroEntity phieu = getPhieuOrThrow(phieuId);
+		NguoiDungEntity nguoiDung = getNguoiDungByTaiKhoanIdOrThrow(taiKhoanId);
+		validateCoQuyenChat(phieu, nguoiDung, roles);
+
+		TrangThaiDangGoTinNhanResponse response = TrangThaiDangGoTinNhanResponse.builder()
+				.phieuId(phieuId)
+				.nguoiDungId(nguoiDung.getId())
+				.dangGo(request.getDangGo())
+				.updatedAt(Instant.now())
+				.build();
+		tinNhanRealtimePublisher.publishTrangThaiDangGo(phieuId, response);
+		return response;
 	}
 
 	public Page<PhieuCuuTroEntity> search(PhieuCuuTroFilterRequest filter, Pageable pageable) {
@@ -273,6 +456,65 @@ public class PhieuCuuTroService {
 	private PhanCongEntity getPhanCongOrThrow(Long phieuId) {
 		return phanCongRepository.findByPhieuCuuTro_Id(phieuId)
 				.orElseThrow(() -> new InvalidFieldException("Phieu chua duoc dieu phoi doi nhom"));
+	}
+
+	private TepTinEntity resolveTepTinGuiTinNhan(GuiTinNhanPhieuRequest request) {
+		if (request.getTepTinId() == null) {
+			return null;
+		}
+		return tepTinRepository.findById(request.getTepTinId())
+				.orElseThrow(() -> new EntityNotFoundException("TepTin not found with id=" + request.getTepTinId()));
+	}
+
+	private ViTriEntity resolveViTriGuiTinNhan(GuiTinNhanPhieuRequest request) {
+		if (request.getViTriId() != null && request.getViTri() != null) {
+			throw new InvalidFieldException("Chi duoc truyen mot trong hai truong: viTriId hoac viTri");
+		}
+		if (request.getViTriId() != null) {
+			return viTriRepository.findById(request.getViTriId())
+					.orElseThrow(() -> new EntityNotFoundException("ViTri not found with id=" + request.getViTriId()));
+		}
+		if (request.getViTri() != null) {
+			return viTriCommandService.taoViTriMoi(request.getViTri());
+		}
+		return null;
+	}
+
+	private ViTriEntity resolveViTriTaoPhieu(TaoPhieuHoTroRequest request) {
+		if (request.getViTriId() != null && request.getViTri() != null) {
+			throw new InvalidFieldException("Chi duoc truyen mot trong hai truong: viTriId hoac viTri");
+		}
+		if (request.getViTriId() != null) {
+			return viTriRepository.findById(request.getViTriId())
+					.orElseThrow(() -> new EntityNotFoundException("ViTri not found with id=" + request.getViTriId()));
+		}
+		if (request.getViTri() != null) {
+			return viTriCommandService.taoViTriMoi(request.getViTri());
+		}
+		throw new InvalidFieldException("viTriId hoac viTri is required");
+	}
+
+	private String resolveLoaiTinNhan(boolean coNoiDung, boolean coMedia, boolean coViTri) {
+		int soThanhPhan = 0;
+		if (coNoiDung) {
+			soThanhPhan++;
+		}
+		if (coMedia) {
+			soThanhPhan++;
+		}
+		if (coViTri) {
+			soThanhPhan++;
+		}
+		if (soThanhPhan > 1) {
+			return LOAI_TIN_NHAN_MIXED;
+		}
+		if (coMedia) {
+			return LOAI_TIN_NHAN_MEDIA;
+		}
+		if (coViTri) {
+			return LOAI_TIN_NHAN_LOCATION;
+		}
+		return LOAI_TIN_NHAN_TEXT;
 	}
 
 	private List<ChiTietCuuTroEntity> buildChiTietCuuTro(PhieuCuuTroEntity phieu, List<TaoChiTietCuuTroRequest> chiTietRequests) {
@@ -471,19 +713,32 @@ public class PhieuCuuTroService {
 		return null;
 	}
 
-	private void validateCoQuyenChat(PhieuCuuTroEntity phieu, NguoiDungEntity sender) {
-		if (isCurrentRole(RoleType.ADMIN)) {
+	private Set<String> getCurrentRoles() {
+		Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+		if (authentication == null || authentication.getAuthorities() == null) {
+			return Set.of();
+		}
+		return authentication.getAuthorities()
+				.stream()
+				.map(grantedAuthority -> grantedAuthority.getAuthority())
+				.filter(StringUtils::hasText)
+				.collect(Collectors.toSet());
+	}
+
+	private void validateCoQuyenChat(PhieuCuuTroEntity phieu, NguoiDungEntity sender, Set<String> roles) {
+		Set<String> activeRoles = roles == null ? Set.of() : roles;
+		if (activeRoles.contains(RoleType.ADMIN.name())) {
 			return;
 		}
 
-		if (isCurrentRole(RoleType.NGUOI_DAN)) {
+		if (activeRoles.contains(RoleType.NGUOI_DAN.name())) {
 			if (phieu.getNguoiDung() == null || !Objects.equals(phieu.getNguoiDung().getId(), sender.getId())) {
 				throw new InvalidFieldException("Nguoi dan chi duoc chat tren phieu cua chinh minh");
 			}
 			return;
 		}
 
-		if (isCurrentRole(RoleType.TRUONG_NHOM_TNV)) {
+		if (activeRoles.contains(RoleType.TRUONG_NHOM_TNV.name())) {
 			PhanCongEntity phanCong = getPhanCongOrThrow(phieu.getId());
 			boolean laDoiTruong = doiNhomTinhNguyenVienRepository.existsByDoiNhom_IdAndTinhNguyenVien_NguoiDung_IdAndVaiTro(
 					phanCong.getDoiNhom().getId(),
@@ -496,13 +751,6 @@ public class PhieuCuuTroService {
 		}
 
 		throw new InvalidFieldException("Role hien tai khong duoc phep chat");
-	}
-
-	private boolean isCurrentRole(RoleType roleType) {
-		Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-		return authentication != null && authentication.getAuthorities()
-				.stream()
-				.anyMatch(grantedAuthority -> roleType.name().equals(grantedAuthority.getAuthority()));
 	}
 
 	private void validateLuotTrangThai(TrangThaiPhieuHoTro hienTai, TrangThaiPhieuHoTro moi) {

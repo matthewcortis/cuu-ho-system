@@ -8,15 +8,14 @@ export default function TinhNguyenVien() {
     <>
       <PageMeta
         title="Tình Nguyện Viên"
-        description="Trang quản lý tình nguyện viên, hiển thị danh sách các tình nguyện viên và thông tin liên quan."
+        description="Trang quản lý tình nguyện viên đã được duyệt và điều phối vào đội nhóm."
       />
       <PageBreadcrumb pageTitle="Tình Nguyện Viên" />
       <div className="space-y-6">
-        <ComponentCard title="Danh sách tình nguyện viên ">
+        <ComponentCard title="Danh sách tình nguyện viên đã duyệt">
           <DanhSachTinhNguyenVien />
         </ComponentCard>
       </div>
     </>
   );
 }
-

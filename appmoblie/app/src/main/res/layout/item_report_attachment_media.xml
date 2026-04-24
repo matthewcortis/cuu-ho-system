@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="88dp"
+    android:layout_height="88dp"
+    android:layout_marginEnd="10dp">
+
+    <ImageView
+        android:id="@+id/ivReportAttachmentPreview"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:background="@drawable/bg_report_surface_rounded"
+        android:contentDescription="@string/report_attachment_media_preview"
+        android:scaleType="centerCrop" />
+
+    <ImageView
+        android:id="@+id/ivReportAttachmentVideoOverlay"
+        android:layout_width="30dp"
+        android:layout_height="30dp"
+        android:layout_gravity="center"
+        android:contentDescription="@string/report_attachment_video_badge"
+        android:src="@drawable/ic_report_video_overlay"
+        android:visibility="gone" />
+
+    <ImageButton
+        android:id="@+id/btnReportAttachmentRemove"
+        android:layout_width="28dp"
+        android:layout_height="28dp"
+        android:layout_gravity="top|start"
+        android:layout_marginStart="4dp"
+        android:layout_marginTop="4dp"
+        android:background="@drawable/bg_report_attachment_remove_button"
+        android:contentDescription="@string/report_attachment_remove_item"
+        android:padding="5dp"
+        android:src="@drawable/delete_24px"
+        app:tint="@color/white" />
+
+</FrameLayout>

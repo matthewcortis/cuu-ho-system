@@ -5,3 +5,4 @@ taskkill /PID 22152 /F
 CLOUDINARY_URL=cloudinary://<347133431269515>:<u_2GkUoemPNdqwbBKXzFPASjmb4>@da0aom5wf
 
 
+open.api.local-server-url=http://localhost:${server.port:8080}
