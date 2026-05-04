@@ -23,6 +23,7 @@ public class PhieuCuuTroChiTietDto implements Serializable {
 	Long id;
 	Long vatPhamId;
 	String tenVatPham;
+	String iconUrl;
 	Integer soLuong;
 	String ghiChu;
 	LocalDateTime createdAt;

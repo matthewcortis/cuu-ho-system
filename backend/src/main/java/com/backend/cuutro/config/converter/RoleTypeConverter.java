@@ -15,12 +15,11 @@ public class RoleTypeConverter implements AttributeConverter<RoleType, String> {
 		if (attribute == null) {
 			return null;
 		}
-		// Keep compatibility with existing DB check constraints.
 		if (attribute == RoleType.NGUOI_DAN) {
 			return "USER";
 		}
 		if (attribute == RoleType.TRUONG_NHOM_TNV) {
-			return "VOLUNTEER";
+			return RoleType.TRUONG_NHOM_TNV.name();
 		}
 		return attribute.name();
 	}
@@ -35,7 +34,7 @@ public class RoleTypeConverter implements AttributeConverter<RoleType, String> {
 		if ("USER".equals(normalized)) {
 			return RoleType.NGUOI_DAN;
 		}
-		if ("VOLUNTEER".equals(normalized)) {
+		if ("VOLUNTEER".equals(normalized) || RoleType.TRUONG_NHOM_TNV.name().equals(normalized)) {
 			return RoleType.TRUONG_NHOM_TNV;
 		}
 		return RoleType.valueOf(normalized);

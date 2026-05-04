@@ -587,6 +587,9 @@ public class PhieuCuuTroService {
 						.id(chiTiet.getId())
 						.vatPhamId(chiTiet.getVatPham() != null ? chiTiet.getVatPham().getId() : null)
 						.tenVatPham(chiTiet.getVatPham() != null ? chiTiet.getVatPham().getTenVatPham() : null)
+						.iconUrl(chiTiet.getVatPham() != null && chiTiet.getVatPham().getTepTin() != null
+								? chiTiet.getVatPham().getTepTin().getDuongDan()
+								: null)
 						.soLuong(chiTiet.getSoLuong())
 						.ghiChu(chiTiet.getGhiChu())
 						.createdAt(chiTiet.getCreatedAt())

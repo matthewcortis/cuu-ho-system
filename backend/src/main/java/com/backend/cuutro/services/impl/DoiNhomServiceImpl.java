@@ -12,6 +12,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
 import com.backend.cuutro.constant.enums.TrangThaiDuyetTinhNguyenVien;
+import com.backend.cuutro.constant.enums.RoleType;
 import com.backend.cuutro.dto.request.DoiNhomCapNhatRequest;
 import com.backend.cuutro.dto.request.DoiNhomTaoRequest;
 import com.backend.cuutro.dto.request.ViTriInputRequest;
@@ -20,12 +21,14 @@ import com.backend.cuutro.dto.response.entities.DoiNhomThanhVienDto;
 import com.backend.cuutro.entities.DoiNhomEntity;
 import com.backend.cuutro.entities.DoiNhomTinhNguyenVienEntity;
 import com.backend.cuutro.entities.NguoiDungEntity;
+import com.backend.cuutro.entities.TaiKhoanEntity;
 import com.backend.cuutro.entities.TinhNguyenVienEntity;
 import com.backend.cuutro.entities.ViTriEntity;
 import com.backend.cuutro.exception.customize.InvalidFieldException;
 import com.backend.cuutro.mapper.DoiNhomMapper;
 import com.backend.cuutro.repository.DoiNhomRepository;
 import com.backend.cuutro.repository.DoiNhomTinhNguyenVienRepository;
+import com.backend.cuutro.repository.TaiKhoanRepository;
 import com.backend.cuutro.repository.TinhNguyenVienRepository;
 import com.backend.cuutro.services.DoiNhomService;
 import com.backend.cuutro.services.ViTriCommandService;
@@ -41,6 +44,7 @@ public class DoiNhomServiceImpl implements DoiNhomService {
 	private final DoiNhomRepository doiNhomRepository;
 	private final DoiNhomTinhNguyenVienRepository doiNhomTinhNguyenVienRepository;
 	private final TinhNguyenVienRepository tinhNguyenVienRepository;
+	private final TaiKhoanRepository taiKhoanRepository;
 	private final ViTriCommandService viTriCommandService;
 	private final DoiNhomMapper doiNhomMapper;
 
@@ -86,7 +90,7 @@ public class DoiNhomServiceImpl implements DoiNhomService {
 
 		return dtoList;
 	}
-
+		
 	@Override
 	@Transactional
 	public DoiNhomDto taoDoiNhom(DoiNhomTaoRequest request) {
@@ -109,8 +113,9 @@ public class DoiNhomServiceImpl implements DoiNhomService {
 		phanCongVaiTro.setTinhNguyenVien(doiTruong);
 		phanCongVaiTro.setVaiTro("truong_nhom");
 		doiNhomTinhNguyenVienRepository.save(phanCongVaiTro);
-
+		capNhatVaiTroTaiKhoan(doiTruong, RoleType.TRUONG_NHOM_TNV);
 		DoiNhomDto dto = doiNhomMapper.toDto(savedDoiNhom);
+
 		DoiNhomThanhVienDto doiTruongDto = toThanhVienDto(phanCongVaiTro);
 		dto.setDoiTruong(doiTruongDto);
 		dto.setThanhViens(doiTruongDto == null ? List.of() : List.of(doiTruongDto));
@@ -171,8 +176,8 @@ public class DoiNhomServiceImpl implements DoiNhomService {
 
 		boolean daNamTrongDoi = doiNhomId != null
 				&& doiNhomTinhNguyenVienRepository.existsByDoiNhom_IdAndTinhNguyenVien_Id(doiNhomId, doiTruong.getId());
-		if (!daNamTrongDoi && doiNhomTinhNguyenVienRepository.countByTinhNguyenVien_Id(doiTruong.getId()) >= 3) {
-			throw new InvalidFieldException("Mot tinh nguyen vien chi duoc tham gia toi da 3 doi nhom");
+		if (!daNamTrongDoi && doiNhomTinhNguyenVienRepository.countByTinhNguyenVien_Id(doiTruong.getId()) >= 1) {
+			throw new InvalidFieldException("Mot tinh nguyen vien chi duoc tham gia toi da 1 doi nhom");
 		}
 	}
 
@@ -202,6 +207,9 @@ public class DoiNhomServiceImpl implements DoiNhomService {
 				.findFirstByDoiNhom_IdAndVaiTro(doiNhomId, "truong_nhom");
 		Optional<DoiNhomTinhNguyenVienEntity> thanhVienMoi = doiNhomTinhNguyenVienRepository
 				.findByDoiNhom_IdAndTinhNguyenVien_Id(doiNhomId, doiTruongMoi.getId());
+		TinhNguyenVienEntity doiTruongCu = doiTruongHienTai
+				.map(DoiNhomTinhNguyenVienEntity::getTinhNguyenVien)
+				.orElse(null);
 
 		DoiNhomTinhNguyenVienEntity recordDoiTruongMoi = thanhVienMoi.orElseGet(() -> {
 			DoiNhomTinhNguyenVienEntity mapping = new DoiNhomTinhNguyenVienEntity();
@@ -218,6 +226,39 @@ public class DoiNhomServiceImpl implements DoiNhomService {
 				current.setVaiTro("thanh_vien");
 			}
 		}
+		capNhatVaiTroTaiKhoan(doiTruongMoi, RoleType.TRUONG_NHOM_TNV);
+		dongBoVaiTroTaiKhoanDoiTruongCu(doiNhomId, doiTruongCu, doiTruongMoi);
+	}
+
+	private void dongBoVaiTroTaiKhoanDoiTruongCu(
+			Long doiNhomId,
+			TinhNguyenVienEntity doiTruongCu,
+			TinhNguyenVienEntity doiTruongMoi
+	) {
+		if (doiTruongCu == null || doiTruongMoi == null || Objects.equals(doiTruongCu.getId(), doiTruongMoi.getId())) {
+			return;
+		}
+		boolean conLaDoiTruongDoiKhac = doiNhomTinhNguyenVienRepository
+				.existsByTinhNguyenVien_IdAndDoiNhom_IdNotAndVaiTro(doiTruongCu.getId(), doiNhomId, "truong_nhom");
+		if (conLaDoiTruongDoiKhac) {
+			return;
+		}
+		capNhatVaiTroTaiKhoan(doiTruongCu, RoleType.NGUOI_DAN);
+	}
+
+	private void capNhatVaiTroTaiKhoan(TinhNguyenVienEntity tinhNguyenVien, RoleType vaiTro) {
+		if (tinhNguyenVien == null || vaiTro == null || tinhNguyenVien.getNguoiDung() == null) {
+			return;
+		}
+		TaiKhoanEntity taiKhoan = tinhNguyenVien.getNguoiDung().getTaiKhoan();
+		if (taiKhoan == null) {
+			return;
+		}
+		if (vaiTro.equals(taiKhoan.getVaiTro())) {
+			return;
+		}
+		taiKhoan.setVaiTro(vaiTro);
+		taiKhoanRepository.save(taiKhoan);
 	}
 
 	private String normalizeRequired(String value, String errorMessage) {

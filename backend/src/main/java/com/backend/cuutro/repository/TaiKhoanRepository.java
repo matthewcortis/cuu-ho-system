@@ -13,3 +13,4 @@ public interface TaiKhoanRepository extends JpaRepository<TaiKhoanEntity, Long>,
 
 	Optional<TaiKhoanEntity> findByTenDangNhapIgnoreCaseOrEmailIgnoreCase(String tenDangNhap, String email);
 }
+ 
