@@ -92,6 +92,8 @@ public class PhieuCuuTroService {
 	private static final String LOAI_TIN_NHAN_LOCATION = "location";
 	private static final String LOAI_TIN_NHAN_MIXED = "mixed";
 	private static final List<String> TRANG_THAI_PHIEU_KET_THUC = List.of(
+			"completed",
+			"done",
 			TrangThaiPhieuHoTro.HOAN_THANH.name(),
 			TrangThaiPhieuHoTro.HUY.name());
 
@@ -195,6 +197,24 @@ public class PhieuCuuTroService {
 	}
 
 	@Transactional
+	public TrangThaiPhieuResponse tuChoiNhiemVu(Long phieuId) {
+		PhanCongEntity phanCong = getPhanCongOrThrow(phieuId);
+		validateCurrentUserLaDoiTruong(phanCong.getDoiNhom().getId());
+
+		PhieuCuuTroEntity phieu = phanCong.getPhieuCuuTro();
+		TrangThaiPhieuHoTro trangThaiHienTai = getTrangThaiNghiepVu(phieu, phanCong);
+		if (trangThaiHienTai != TrangThaiPhieuHoTro.CHO_DIEU_PHOI) {
+			throw new InvalidFieldException("Chi duoc tu choi nhiem vu khi phieu dang CHO_DIEU_PHOI");
+		}
+
+		phieu.setTrangThai(PHIEU_TRANG_THAI_PENDING_DB);
+		phieuCuuTroRepository.save(phieu);
+		phanCongRepository.delete(phanCong);
+		setDoiNhomDangRanh(phanCong.getDoiNhom());
+		return buildTrangThaiResponse(phieu, null);
+	}
+
+	@Transactional
 	public TrangThaiPhieuResponse capNhatTrangThai(Long phieuId, CapNhatTrangThaiPhieuRequest request) {
 		PhanCongEntity phanCong = getPhanCongOrThrow(phieuId);
 		validateCurrentUserLaDoiTruong(phanCong.getDoiNhom().getId());
@@ -258,9 +278,34 @@ public class PhieuCuuTroService {
 			NguoiDungEntity nguoiDung = getNguoiDungByTaiKhoanIdOrThrow(taiKhoanId);
 			return phieuCuuTroRepository.findAllByNguoiDung_IdOrderByCreatedAtDesc(nguoiDung.getId());
 		}
+		if (roles.contains(RoleType.TRUONG_NHOM_TNV.name())) {
+			return resolveDanhSachPhieuChoDoiTruong();
+		}
 		return phieuCuuTroRepository.findAllByOrderByCreatedAtDesc();
 	}
 
+	private List<PhieuCuuTroEntity> resolveDanhSachPhieuChoDoiTruong() {
+		Long taiKhoanId = getCurrentTaiKhoanIdOrThrow();
+		NguoiDungEntity nguoiDung = getNguoiDungByTaiKhoanIdOrThrow(taiKhoanId);
+		List<Long> doiNhomIds = doiNhomTinhNguyenVienRepository
+				.findByTinhNguyenVien_NguoiDung_IdAndVaiTro(nguoiDung.getId(), DOI_TRUONG_VAI_TRO)
+				.stream()
+				.map(mapping -> mapping.getDoiNhom() != null ? mapping.getDoiNhom().getId() : null)
+				.filter(Objects::nonNull)
+				.distinct()
+				.toList();
+		if (doiNhomIds.isEmpty()) {
+			return List.of();
+		}
+
+		return phanCongRepository.findAllByDoiNhom_IdInOrderByAssignedAtDesc(doiNhomIds)
+				.stream()
+				.map(PhanCongEntity::getPhieuCuuTro)
+				.filter(Objects::nonNull)
+				.distinct()
+				.toList();
+	}
+ 
 	@Transactional
 	public TinNhanDto guiTinNhan(Long phieuId, GuiTinNhanPhieuRequest request) {
 		Long taiKhoanId = getCurrentTaiKhoanIdOrThrow();
@@ -789,8 +834,8 @@ public class PhieuCuuTroService {
 		return switch (normalized) {
 			case "PENDING" -> TrangThaiPhieuHoTro.CHO_DIEU_PHOI;
 			case "ASSIGNED", "ACCEPTED" -> TrangThaiPhieuHoTro.DA_NHAN;
-			case "PROCESSING" -> TrangThaiPhieuHoTro.DANG_XU_LY;
-			case "DONE" -> TrangThaiPhieuHoTro.HOAN_THANH;
+			case "IN_PROGRESS", "PROCESSING" -> TrangThaiPhieuHoTro.DANG_XU_LY;
+			case "COMPLETED", "DONE" -> TrangThaiPhieuHoTro.HOAN_THANH;
 			case "CHO_DIEU_PHOI", "DA_NHAN", "DANG_TREN_DUONG_TOI", "DANG_XU_LY", "HOAN_THANH", "HUY" ->
 				TrangThaiPhieuHoTro.valueOf(normalized);
 			default -> throw new InvalidFieldException(

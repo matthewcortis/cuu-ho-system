@@ -6,6 +6,7 @@
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
 
     <application
         android:name=".app.MyApp"
@@ -18,6 +19,9 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.Cuutro"
         android:usesCleartextTraffic="${usesCleartextTraffic}">
+        <activity
+            android:name=".features.chat.ui.ChatsActivity"
+            android:exported="false" />
         <activity
             android:name=".features.report.ui.DetailReportActivity"
             android:exported="false" />
@@ -53,6 +57,9 @@
             android:exported="false" />
         <activity
             android:name=".features.profile.ui.AccountDetailsActivity"
+            android:exported="false" />
+        <activity
+            android:name=".features.navigation.ui.CaptainNavigationActivity"
             android:exported="false" />
         <activity
             android:name=".features.navigation.ui.NavActivity"

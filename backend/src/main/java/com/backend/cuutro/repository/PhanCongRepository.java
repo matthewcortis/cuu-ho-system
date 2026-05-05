@@ -1,5 +1,6 @@
 package com.backend.cuutro.repository;
 
+import java.util.List;
 import java.util.Optional;
 
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -16,4 +17,6 @@ public interface PhanCongRepository extends JpaRepository<PhanCongEntity, Long>,
 	Optional<PhanCongEntity> findByPhieuCuuTro_Id(Long phieuCuuTroId);
 
 	boolean existsByDoiNhom_IdAndTrangThaiNotIn(Long doiNhomId, java.util.Collection<String> trangThaiKetThuc);
+
+	List<PhanCongEntity> findAllByDoiNhom_IdInOrderByAssignedAtDesc(List<Long> doiNhomIds);
 }

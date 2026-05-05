@@ -17,6 +17,12 @@ export interface ViTriDto {
   diaChi: string;
 }
 
+export interface TepTinDto {
+  id: number;
+  duongDan: string;
+  loaiTepTin: string;
+}
+
 export interface TaiKhoanDto {
   id: number;
   email: string;
@@ -51,14 +57,35 @@ export interface PhieuCuuTroChiTietDto {
   ghiChu: string;
 }
 
+export interface LoaiSuCoDto {
+  id: number;
+  ten: string;
+  iconUrl: string;
+}
+
+export interface PhieuCuuTroTepTinDto {
+  id: number;
+  tepTin: TepTinDto | null;
+  loai: string;
+  thuTu: number | null;
+  moTa: string;
+}
+
 export interface PhieuCuuTroDto {
   id: number;
+  loaiSuCo: LoaiSuCoDto | null;
   viTri: ViTriDto | null;
+  tepTins: PhieuCuuTroTepTinDto[];
   nguoiGui: NguoiGuiDto | null;
   ghiChu: string;
   trangThai: string;
   chiTietCuuTro: PhieuCuuTroChiTietDto[];
   createdAt: string;
+}
+
+export interface PhanCongDto {
+  id: number;
+  trangThai: string;
 }
 
 export class NguoiDungApiError extends Error {
@@ -111,6 +138,18 @@ function parseViTriDto(value: unknown): ViTriDto | null {
     lat: typeof value.lat === "string" ? value.lat : "",
     longitude: typeof value.longitude === "string" ? value.longitude : "",
     diaChi: typeof value.diaChi === "string" ? value.diaChi : "",
+  };
+}
+
+function parseTepTinDto(value: unknown): TepTinDto | null {
+  if (!isObjectRecord(value) || typeof value.id !== "number") {
+    return null;
+  }
+
+  return {
+    id: value.id,
+    duongDan: typeof value.duongDan === "string" ? value.duongDan : "",
+    loaiTepTin: typeof value.loaiTepTin === "string" ? value.loaiTepTin : "",
   };
 }
 
@@ -194,18 +233,70 @@ function parsePhieuCuuTroChiTietDto(value: unknown): PhieuCuuTroChiTietDto | nul
   };
 }
 
+function parseLoaiSuCoDto(value: unknown): LoaiSuCoDto | null {
+  if (!isObjectRecord(value) || typeof value.id !== "number") {
+    return null;
+  }
+
+  return {
+    id: value.id,
+    ten: typeof value.ten === "string" ? value.ten : "",
+    iconUrl: typeof value.iconUrl === "string" ? value.iconUrl : "",
+  };
+}
+
+function parsePhieuCuuTroTepTinDto(value: unknown): PhieuCuuTroTepTinDto | null {
+  if (!isObjectRecord(value) || typeof value.id !== "number") {
+    return null;
+  }
+
+  const tepTinValue = value.tepTin;
+  const tepTin =
+    tepTinValue === null || tepTinValue === undefined ? null : parseTepTinDto(tepTinValue);
+  if (tepTinValue !== null && tepTinValue !== undefined && !tepTin) {
+    return null;
+  }
+
+  return {
+    id: value.id,
+    tepTin,
+    loai: typeof value.loai === "string" ? value.loai : "",
+    thuTu: typeof value.thuTu === "number" ? value.thuTu : null,
+    moTa: typeof value.moTa === "string" ? value.moTa : "",
+  };
+}
+
 function parsePhieuCuuTroDto(value: unknown): PhieuCuuTroDto | null {
   if (!isObjectRecord(value) || typeof value.id !== "number") {
     return null;
   }
 
+  const loaiSuCoValue = value.loaiSuCo;
   const viTriValue = value.viTri;
+  const tepTinsValue = value.tepTins;
   const nguoiGuiValue = value.nguoiGui;
   const chiTietValue = value.chiTietCuuTro;
+
+  const loaiSuCo =
+    loaiSuCoValue === null || loaiSuCoValue === undefined
+      ? null
+      : parseLoaiSuCoDto(loaiSuCoValue);
+  if (loaiSuCoValue !== null && loaiSuCoValue !== undefined && !loaiSuCo) {
+    return null;
+  }
 
   const viTri =
     viTriValue === null || viTriValue === undefined ? null : parseViTriDto(viTriValue);
   if (viTriValue !== null && viTriValue !== undefined && !viTri) {
+    return null;
+  }
+
+  const tepTins = Array.isArray(tepTinsValue)
+    ? tepTinsValue
+        .map(parsePhieuCuuTroTepTinDto)
+        .filter((item): item is PhieuCuuTroTepTinDto => item !== null)
+    : [];
+  if (Array.isArray(tepTinsValue) && tepTins.length === 0 && tepTinsValue.length > 0) {
     return null;
   }
 
@@ -228,12 +319,25 @@ function parsePhieuCuuTroDto(value: unknown): PhieuCuuTroDto | null {
 
   return {
     id: value.id,
+    loaiSuCo,
     viTri,
+    tepTins,
     nguoiGui,
     ghiChu: typeof value.ghiChu === "string" ? value.ghiChu : "",
     trangThai: typeof value.trangThai === "string" ? value.trangThai : "",
     chiTietCuuTro,
     createdAt: typeof value.createdAt === "string" ? value.createdAt : "",
+  };
+}
+
+function parsePhanCongDto(value: unknown): PhanCongDto | null {
+  if (!isObjectRecord(value) || typeof value.id !== "number") {
+    return null;
+  }
+
+  return {
+    id: value.id,
+    trangThai: typeof value.trangThai === "string" ? value.trangThai : "",
   };
 }
 
@@ -352,6 +456,31 @@ export async function updateNguoiDungTaiKhoanTrangThai(
       "Backend khong tra ve nguoi dung sau cap nhat trang thai tai khoan",
       envelope.status
     );
+  }
+
+  return parsedItem;
+}
+
+export async function dieuPhoiPhieu(
+  phieuId: number,
+  doiNhomId: number
+): Promise<PhanCongDto> {
+  const authorization = getAuthorizationHeaderOrThrow();
+  const envelope = await requestEnvelope<unknown>(
+    `/phieu-cuu-tro/${phieuId}/dieu-phoi`,
+    {
+      method: "POST",
+      headers: {
+        Authorization: authorization,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ doiNhomId }),
+    }
+  );
+
+  const parsedItem = parsePhanCongDto(envelope.data);
+  if (!parsedItem) {
+    throw new NguoiDungApiError("Backend khong tra ve ket qua dieu phoi hop le", envelope.status);
   }
 
   return parsedItem;

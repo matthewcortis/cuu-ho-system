@@ -7,7 +7,6 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
 public class AuthSessionManager {
-
     private static final String PREFS_NAME = "cuutro_auth_session";
     private static final String KEY_TOKEN_TYPE = "token_type";
     private static final String KEY_ACCESS_TOKEN = "access_token";

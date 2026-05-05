@@ -187,12 +187,6 @@ CREATE TABLE public.tai_khoan (
   created_at timestamp with time zone DEFAULT now(),
   CONSTRAINT tai_khoan_pkey PRIMARY KEY (id)
 );
--- Neu DB da ton tai du lieu cu:
--- UPDATE public.tai_khoan SET vai_tro = 'TRUONG_NHOM_TNV' WHERE vai_tro = 'VOLUNTEER';
--- ALTER TABLE public.tai_khoan DROP CONSTRAINT IF EXISTS tai_khoan_vai_tro_check;
--- ALTER TABLE public.tai_khoan
---   ADD CONSTRAINT tai_khoan_vai_tro_check
---   CHECK (vai_tro = ANY (ARRAY['ADMIN', 'USER', 'TRUONG_NHOM_TNV']));
 CREATE TABLE public.tep_tin (
   id bigint GENERATED ALWAYS AS IDENTITY NOT NULL,
   duong_dan character varying,

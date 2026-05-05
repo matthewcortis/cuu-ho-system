@@ -85,6 +85,14 @@ public class PhieuCuuTroController {
 		return ResponseEntity.ok(buildResponse(HttpStatus.OK, "Nhan nhiem vu thanh cong", data, httpRequest));
 	}
 
+	@PostMapping("/{id}/tu-choi-nhiem-vu")
+	public ResponseEntity<ResponseData<TrangThaiPhieuResponse>> tuChoiNhiemVu(
+			@PathVariable Long id,
+			HttpServletRequest httpRequest) {
+		TrangThaiPhieuResponse data = phieuCuuTroService.tuChoiNhiemVu(id);
+		return ResponseEntity.ok(buildResponse(HttpStatus.OK, "Tu choi nhiem vu thanh cong", data, httpRequest));
+	}
+
 	@PutMapping("/{id}/trang-thai")
 	public ResponseEntity<ResponseData<TrangThaiPhieuResponse>> capNhatTrangThai(
 			@PathVariable Long id,

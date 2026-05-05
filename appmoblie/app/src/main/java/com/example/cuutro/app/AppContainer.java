@@ -9,6 +9,8 @@ import com.example.cuutro.core.network.NetworkCallExecutor;
 import com.example.cuutro.core.network.NetworkClientFactory;
 import com.example.cuutro.features.auth.data.AuthRepository;
 import com.example.cuutro.features.auth.data.remote.AuthApiService;
+import com.example.cuutro.features.chat.data.ChatRepository;
+import com.example.cuutro.features.chat.data.remote.ChatApiService;
 import com.example.cuutro.features.profile.data.ProfileRepository;
 import com.example.cuutro.features.profile.data.remote.ProfileApiService;
 import com.example.cuutro.features.report.data.ReportRepository;
@@ -24,6 +26,7 @@ public class AppContainer {
     private final ProfileRepository profileRepository;
     private final SosRepository sosRepository;
     private final ReportRepository reportRepository;
+    private final ChatRepository chatRepository;
 
     public AppContainer(@NonNull Context context) {
         Context appContext = context.getApplicationContext();
@@ -35,6 +38,7 @@ public class AppContainer {
         ProfileApiService profileApiService = retrofit.create(ProfileApiService.class);
         SosApiService sosApiService = retrofit.create(SosApiService.class);
         ReportApiService reportApiService = retrofit.create(ReportApiService.class);
+        ChatApiService chatApiService = retrofit.create(ChatApiService.class);
 
         authRepository = new AuthRepository(authApiService, authSessionManager, networkCallExecutor);
         profileRepository = new ProfileRepository(
@@ -47,6 +51,12 @@ public class AppContainer {
         reportRepository = new ReportRepository(
                 appContext,
                 reportApiService,
+                authRepository,
+                networkCallExecutor
+        );
+        chatRepository = new ChatRepository(
+                appContext,
+                chatApiService,
                 authRepository,
                 networkCallExecutor
         );
@@ -70,5 +80,10 @@ public class AppContainer {
     @NonNull
     public ReportRepository getReportRepository() {
         return reportRepository;
+    }
+
+    @NonNull
+    public ChatRepository getChatRepository() {
+        return chatRepository;
     }
 }

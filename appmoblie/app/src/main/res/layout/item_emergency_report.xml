@@ -84,5 +84,54 @@
             android:lineSpacingExtra="2dp"
             android:textColor="@color/report_text_primary"
             android:textSize="13sp" />
+
+        <TextView
+            android:id="@+id/tvReportItemStatus"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="10dp"
+            android:background="@drawable/bg_sos_filter_group"
+            android:paddingStart="10dp"
+            android:paddingTop="4dp"
+            android:paddingEnd="10dp"
+            android:paddingBottom="4dp"
+            android:textColor="@color/report_location_text"
+            android:textSize="12sp"
+            android:visibility="gone" />
+
+        <LinearLayout
+            android:id="@+id/layoutTaskActions"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:gravity="end"
+            android:orientation="horizontal"
+            android:visibility="gone">
+
+            <Button
+                android:id="@+id/btnTaskReject"
+                android:layout_width="wrap_content"
+                android:layout_height="36dp"
+                android:background="@drawable/bg_captain_task_reject"
+                android:paddingStart="14dp"
+                android:paddingEnd="14dp"
+                android:text="@string/captain_task_reject"
+                android:textAllCaps="false"
+                android:textColor="@color/report_location_text"
+                android:textSize="13sp" />
+
+            <Button
+                android:id="@+id/btnTaskAccept"
+                android:layout_width="wrap_content"
+                android:layout_height="36dp"
+                android:layout_marginStart="8dp"
+                android:background="@drawable/bg_captain_task_accept"
+                android:paddingStart="14dp"
+                android:paddingEnd="14dp"
+                android:text="@string/captain_task_accept"
+                android:textAllCaps="false"
+                android:textColor="@color/white"
+                android:textSize="13sp" />
+        </LinearLayout>
     </LinearLayout>
 </com.google.android.material.card.MaterialCardView>

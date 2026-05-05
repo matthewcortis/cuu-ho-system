@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android">
+    <item
+        android:id="@+id/nav_captain_member_messages"
+        android:icon="@drawable/ic_nav_community"
+        android:title="@string/nav_captain_member_messages" />
+    <item
+        android:id="@+id/nav_captain_me"
+        android:icon="@drawable/ic_nav_profile"
+        android:title="@string/nav_captain_me" />
+</menu>

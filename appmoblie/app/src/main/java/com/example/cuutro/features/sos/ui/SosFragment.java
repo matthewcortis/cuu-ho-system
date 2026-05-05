@@ -16,6 +16,7 @@ import com.example.cuutro.app.MyApp;
 import com.example.cuutro.core.network.NetworkError;
 import com.example.cuutro.core.network.ResultCallback;
 import com.example.cuutro.features.auth.data.AuthRepository;
+import com.example.cuutro.features.report.ui.DetailReportActivity;
 import com.example.cuutro.features.sos.data.SosRepository;
 import com.example.cuutro.features.sos.model.EmergencyReportItem;
 import com.example.cuutro.features.splash.ui.NotificationScreenActivity;
@@ -61,7 +62,20 @@ public class SosFragment extends Fragment {
 
     private void setupRecyclerView(@NonNull View root) {
         RecyclerView recyclerView = root.findViewById(R.id.rvEmergencyReports);
-        adapter = new EmergencyReportAdapter();
+        adapter = new EmergencyReportAdapter(new EmergencyReportAdapter.Listener() {
+            @Override
+            public void onDeleteClicked(@NonNull EmergencyReportItem item, int position) {
+                // No-op: danh sách lịch sử không cho xoá ở màn này.
+            }
+
+            @Override
+            public void onItemClicked(@NonNull EmergencyReportItem item, int position) {
+                if (!isShowingReportedByYou || item.isCompleted()) {
+                    return;
+                }
+                startActivity(DetailReportActivity.createIntent(requireContext(), item));
+            }
+        });
         recyclerView.setLayoutManager(new LinearLayoutManager(requireContext()));
         recyclerView.setAdapter(adapter);
     }

@@ -21,6 +21,7 @@ import com.example.cuutro.app.MyApp;
 import com.example.cuutro.core.network.NetworkError;
 import com.example.cuutro.core.network.ResultCallback;
 import com.example.cuutro.features.auth.data.AuthRepository;
+import com.example.cuutro.features.navigation.ui.CaptainNavigationActivity;
 import com.example.cuutro.features.navigation.ui.NavActivity;
 
 public class LoginActivity extends AppCompatActivity {
@@ -54,7 +55,7 @@ public class LoginActivity extends AppCompatActivity {
     protected void onStart() {
         super.onStart();
         if (authRepository != null && authRepository.hasActiveSession()) {
-            navigateToNavActivity();
+            navigateToHomeActivityByRole();
         }
     }
 
@@ -147,7 +148,7 @@ public class LoginActivity extends AppCompatActivity {
                 if (isFinishing() || isDestroyed()) {
                     return;
                 }
-                navigateToNavActivity();
+                navigateToHomeActivityByRole();
             }
 
             @Override
@@ -180,8 +181,12 @@ public class LoginActivity extends AppCompatActivity {
         }
     }
 
-    private void navigateToNavActivity() {
-        Intent intent = new Intent(this, NavActivity.class);
+    private void navigateToHomeActivityByRole() {
+        Class<?> destination = NavActivity.class;
+        if (authRepository != null && authRepository.isCurrentRoleCaptain()) {
+            destination = CaptainNavigationActivity.class;
+        }
+        Intent intent = new Intent(this, destination);
         intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
         startActivity(intent);
         finish();

@@ -60,6 +60,8 @@ public class SecurityConfig implements WebMvcConfigurer {
 						.hasAuthority(RoleType.ADMIN.name())
 						.requestMatchers(HttpMethod.POST, "/phieu-cuu-tro/*/nhan-nhiem-vu")
 						.hasAuthority(RoleType.TRUONG_NHOM_TNV.name())
+						.requestMatchers(HttpMethod.POST, "/phieu-cuu-tro/*/tu-choi-nhiem-vu")
+						.hasAuthority(RoleType.TRUONG_NHOM_TNV.name())
 						.requestMatchers(HttpMethod.PUT, "/phieu-cuu-tro/*/trang-thai")
 						.hasAuthority(RoleType.TRUONG_NHOM_TNV.name())
 						.requestMatchers(HttpMethod.POST, "/phieu-cuu-tro/*/tin-nhan")

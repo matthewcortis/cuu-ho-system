@@ -71,6 +71,15 @@ public class AuthRepository {
         return role.isEmpty() ? null : role;
     }
 
+    public boolean isCurrentRoleCaptain() {
+        return ROLE_TRUONG_NHOM_TNV.equals(normalizeRole(authSessionManager.getRole()));
+    }
+
+    @Nullable
+    public String getAuthorizationHeaderValue() {
+        return authSessionManager.getAuthorizationHeaderValue();
+    }
+
     public void login(
             @Nullable String usernameOrEmail,
             @Nullable String password,

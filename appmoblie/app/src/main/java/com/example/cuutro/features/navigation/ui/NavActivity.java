@@ -1,5 +1,6 @@
 package com.example.cuutro.features.navigation.ui;
 
+import android.content.Intent;
 import android.os.Bundle;
 
 import androidx.appcompat.app.AppCompatActivity;
@@ -8,6 +9,8 @@ import androidx.fragment.app.FragmentManager;
 import androidx.fragment.app.FragmentTransaction;
 
 import com.example.cuutro.R;
+import com.example.cuutro.app.MyApp;
+import com.example.cuutro.features.auth.data.AuthRepository;
 import com.example.cuutro.features.community.ui.CommunityFragment;
 import com.example.cuutro.features.home.ui.HomeFragment;
 import com.example.cuutro.features.profile.ui.ProfileFragment;
@@ -21,6 +24,7 @@ public class NavActivity extends AppCompatActivity {
     private static final String TAG_COMMUNITY = "tab_community";
     private static final String TAG_PROFILE = "tab_profile";
 
+    private AuthRepository authRepository;
     private BottomNavigationView bottomNavigationView;
     private Fragment activeFragment;
 
@@ -28,6 +32,10 @@ public class NavActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.trang_chu);
+        MyApp app = (MyApp) getApplication();
+        if (app.getAppContainer() != null) {
+            authRepository = app.getAppContainer().getAuthRepository();
+        }
 
         bottomNavigationView = findViewById(R.id.bottom_nav);
         restoreActiveFragment();
@@ -41,6 +49,19 @@ public class NavActivity extends AppCompatActivity {
             bottomNavigationView.setSelectedItemId(R.id.nav_home);
         } else if (activeFragment == null) {
             switchToTab(bottomNavigationView.getSelectedItemId());
+        }
+    }
+
+    @Override
+    protected void onStart() {
+        super.onStart();
+        if (authRepository != null
+                && authRepository.hasActiveSession()
+                && authRepository.isCurrentRoleCaptain()) {
+            Intent intent = CaptainNavigationActivity.createIntent(this);
+            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
+            startActivity(intent);
+            finish();
         }
     }
 
