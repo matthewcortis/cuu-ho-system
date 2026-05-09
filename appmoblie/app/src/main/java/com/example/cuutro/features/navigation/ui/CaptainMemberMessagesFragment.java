@@ -23,6 +23,7 @@ import com.example.cuutro.features.sos.ui.EmergencyReportAdapter;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Locale;
 
 public class CaptainMemberMessagesFragment extends Fragment {
 
@@ -83,6 +84,17 @@ public class CaptainMemberMessagesFragment extends Fragment {
             @Override
             public void onRejectTask(@NonNull EmergencyReportItem item, int position) {
                 thucHienNhiemVuAction(item, false);
+            }
+        });
+        adapter.setShowTaskStatusUpdater(true);
+        adapter.setStatusUpdateListener(new EmergencyReportAdapter.StatusUpdateListener() {
+            @Override
+            public void onUpdateTaskStatus(
+                    @NonNull EmergencyReportItem item,
+                    int position,
+                    @NonNull String statusCode
+            ) {
+                capNhatTrangThaiNhiemVuAction(item, statusCode);
             }
         });
         recyclerView.setLayoutManager(new LinearLayoutManager(requireContext()));
@@ -216,6 +228,55 @@ public class CaptainMemberMessagesFragment extends Fragment {
         }
     }
 
+    private void capNhatTrangThaiNhiemVuAction(
+            @NonNull EmergencyReportItem reportItem,
+            @NonNull String selectedStatusCode
+    ) {
+        if (!isAdded() || sosRepository == null) {
+            return;
+        }
+        if (isTaskActionRunning) {
+            return;
+        }
+        String normalizedStatus = normalizeStatusCode(selectedStatusCode);
+        if (!isAllowedCaptainStatus(normalizedStatus)) {
+            Toast.makeText(requireContext(), R.string.captain_task_update_invalid_status, Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        long reportId = parseReportId(reportItem.getId());
+        if (reportId <= 0L) {
+            Toast.makeText(requireContext(), R.string.chat_invalid_report_id, Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        isTaskActionRunning = true;
+        sosRepository.capNhatTrangThaiNhiemVu(reportId, normalizedStatus, new ResultCallback<String>() {
+            @Override
+            public void onSuccess(String status) {
+                if (!isAdded()) {
+                    return;
+                }
+                isTaskActionRunning = false;
+                Toast.makeText(requireContext(), R.string.captain_task_update_success, Toast.LENGTH_SHORT).show();
+                loadMemberMessageReports();
+            }
+
+            @Override
+            public void onError(@NonNull NetworkError error) {
+                if (!isAdded()) {
+                    return;
+                }
+                isTaskActionRunning = false;
+                Toast.makeText(
+                        requireContext(),
+                        getString(R.string.captain_task_update_failed, error.getMessage()),
+                        Toast.LENGTH_SHORT
+                ).show();
+            }
+        });
+    }
+
     private void openReportChat(@NonNull EmergencyReportItem reportItem) {
         long reportId = parseReportId(reportItem.getId());
         if (reportId <= 0L) {
@@ -238,6 +299,18 @@ public class CaptainMemberMessagesFragment extends Fragment {
         } catch (NumberFormatException ignored) {
             return -1L;
         }
+    }
+
+    @NonNull
+    private String normalizeStatusCode(@NonNull String rawStatusCode) {
+        return rawStatusCode.trim().toUpperCase(Locale.ROOT);
+    }
+
+    private boolean isAllowedCaptainStatus(@NonNull String statusCode) {
+        return SosRepository.TRANG_THAI_DANG_TREN_DUONG_TOI.equals(statusCode)
+                || SosRepository.TRANG_THAI_DANG_XU_LY.equals(statusCode)
+                || SosRepository.TRANG_THAI_HOAN_THANH.equals(statusCode)
+                || SosRepository.TRANG_THAI_HUY.equals(statusCode);
     }
 
     private void showEmptyState(@NonNull String message) {

@@ -19,18 +19,29 @@ import androidx.core.content.ContextCompat;
 import androidx.fragment.app.Fragment;
 
 import com.example.cuutro.R;
+import com.example.cuutro.app.AppContainer;
+import com.example.cuutro.app.MyApp;
+import com.example.cuutro.core.network.NetworkError;
+import com.example.cuutro.core.network.ResultCallback;
 import com.example.cuutro.core.location.DeviceLocationProvider;
-import com.example.cuutro.features.report.ui.ReportActivity;
 import com.example.cuutro.core.location.TrackAsiaMapController;
+import com.example.cuutro.features.report.ui.ReportActivity;
+import com.example.cuutro.features.sos.data.SosRepository;
+import com.example.cuutro.features.sos.model.EmergencyReportMapNode;
 import com.trackasia.android.annotations.Marker;
 import com.trackasia.android.annotations.MarkerOptions;
 import com.trackasia.android.camera.CameraUpdateFactory;
 import com.trackasia.android.geometry.LatLng;
 import com.trackasia.android.maps.MapView;
+import com.trackasia.android.maps.Style;
 import com.trackasia.android.maps.TrackAsiaMap;
+import com.trackasia.android.plugins.annotation.Circle;
+import com.trackasia.android.plugins.annotation.CircleManager;
+import com.trackasia.android.plugins.annotation.CircleOptions;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 
 public class HomeFragment extends Fragment {
 
@@ -39,15 +50,25 @@ public class HomeFragment extends Fragment {
     private static final double DEFAULT_ZOOM_VIETNAM = 9.4;
     private static final double CURRENT_LOCATION_ZOOM = 15.5;
     private static final long SOS_PULSE_DURATION_MS = 1800L;
+    private static final long REPORT_PULSE_DURATION_MS = 1700L;
+    private static final float REPORT_PULSE_MIN_RADIUS = 8f;
+    private static final float REPORT_PULSE_MAX_RADIUS = 24f;
+    private static final float REPORT_CORE_RADIUS = 4.5f;
 
     private MapView mapView;
     private TrackAsiaMapController mapController;
     private TrackAsiaMap trackAsiaMap;
     private Marker currentLocationMarker;
+    private SosRepository sosRepository;
     private DeviceLocationProvider locationProvider;
     private ActivityResultLauncher<String[]> locationPermissionLauncher;
     private LatLng currentUserLatLng;
     private final List<ObjectAnimator> sosPulseAnimators = new ArrayList<>();
+    private final List<Circle> reportPulseCircles = new ArrayList<>();
+    private final List<Circle> reportCoreCircles = new ArrayList<>();
+    private final List<ValueAnimator> reportPulseAnimators = new ArrayList<>();
+    @Nullable
+    private CircleManager reportCircleManager;
 
     public HomeFragment() {
         super(R.layout.fragment_home);
@@ -73,6 +94,12 @@ public class HomeFragment extends Fragment {
     public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
 
+        MyApp app = (MyApp) requireActivity().getApplication();
+        AppContainer appContainer = app.getAppContainer();
+        if (appContainer != null) {
+            sosRepository = appContainer.getSosRepository();
+        }
+
         mapView = view.findViewById(R.id.home_map_view);
         if (mapView != null) {
             mapController = new TrackAsiaMapController(mapView);
@@ -90,6 +117,8 @@ public class HomeFragment extends Fragment {
                     DEFAULT_ZOOM_VIETNAM,
                     map -> {
                         trackAsiaMap = map;
+                        initializeReportCircleManager();
+                        loadRescueReportNodes();
                         if (currentUserLatLng != null) {
                             placeOrMoveCurrentLocationMarker(currentUserLatLng, false);
                         }
@@ -116,10 +145,16 @@ public class HomeFragment extends Fragment {
         if (mapController != null) {
             mapController.onResume();
         }
+        if (reportPulseCircles.isEmpty()) {
+            loadRescueReportNodes();
+        } else {
+            startReportPulseAnimationsIfNeeded();
+        }
     }
 
     @Override
     public void onPause() {
+        stopReportPulseAnimations();
         if (mapController != null) {
             mapController.onPause();
         }
@@ -153,6 +188,12 @@ public class HomeFragment extends Fragment {
     @Override
     public void onDestroyView() {
         stopSosPulse();
+        stopReportPulseAnimations();
+        clearRescueReportNodes();
+        if (reportCircleManager != null) {
+            reportCircleManager.onDestroy();
+            reportCircleManager = null;
+        }
         if (mapController != null) {
             mapController.onDestroy();
             mapController = null;
@@ -162,6 +203,7 @@ public class HomeFragment extends Fragment {
         }
         trackAsiaMap = null;
         currentLocationMarker = null;
+        sosRepository = null;
         mapView = null;
         super.onDestroyView();
     }
@@ -231,6 +273,187 @@ public class HomeFragment extends Fragment {
             animator.cancel();
         }
         sosPulseAnimators.clear();
+    }
+
+    private void initializeReportCircleManager() {
+        if (mapView == null || trackAsiaMap == null) {
+            return;
+        }
+        if (reportCircleManager != null) {
+            return;
+        }
+        Style style = trackAsiaMap.getStyle();
+        if (style == null) {
+            return;
+        }
+        reportCircleManager = new CircleManager(mapView, trackAsiaMap, style);
+    }
+
+    private void loadRescueReportNodes() {
+        if (!isAdded() || sosRepository == null) {
+            return;
+        }
+        initializeReportCircleManager();
+        if (reportCircleManager == null) {
+            return;
+        }
+
+        sosRepository.getEmergencyReportMapNodes(new ResultCallback<List<EmergencyReportMapNode>>() {
+            @Override
+            public void onSuccess(List<EmergencyReportMapNode> data) {
+                if (!isAdded()) {
+                    return;
+                }
+                renderRescueReportNodes(data);
+            }
+
+            @Override
+            public void onError(@NonNull NetworkError error) {
+                if (!isAdded()) {
+                    return;
+                }
+                clearRescueReportNodes();
+            }
+        });
+    }
+
+    private void renderRescueReportNodes(@Nullable List<EmergencyReportMapNode> nodes) {
+        if (reportCircleManager == null) {
+            return;
+        }
+        clearRescueReportNodes();
+        if (nodes == null || nodes.isEmpty()) {
+            return;
+        }
+
+        for (EmergencyReportMapNode node : nodes) {
+            if (node == null) {
+                continue;
+            }
+            NodeStyle nodeStyle = resolveNodeStyle(node.getStatus());
+            if (nodeStyle == null) {
+                continue;
+            }
+
+            LatLng nodePosition = new LatLng(node.getLatitude(), node.getLongitude());
+            Circle pulseCircle = reportCircleManager.create(new CircleOptions()
+                    .withLatLng(nodePosition)
+                    .withCircleColor(nodeStyle.colorHex)
+                    .withCircleOpacity(0.56f)
+                    .withCircleBlur(0.72f)
+                    .withCircleRadius(REPORT_PULSE_MIN_RADIUS)
+                    .withCircleStrokeWidth(0f)
+                    .withCircleStrokeOpacity(0f));
+            Circle coreCircle = reportCircleManager.create(new CircleOptions()
+                    .withLatLng(nodePosition)
+                    .withCircleColor(nodeStyle.colorHex)
+                    .withCircleOpacity(1f)
+                    .withCircleBlur(0f)
+                    .withCircleRadius(REPORT_CORE_RADIUS)
+                    .withCircleStrokeWidth(1.4f)
+                    .withCircleStrokeColor("#FFFFFF")
+                    .withCircleStrokeOpacity(0.9f));
+
+            reportPulseCircles.add(pulseCircle);
+            reportCoreCircles.add(coreCircle);
+        }
+
+        startReportPulseAnimationsIfNeeded();
+    }
+
+    private void clearRescueReportNodes() {
+        stopReportPulseAnimations();
+        if (reportCircleManager != null) {
+            if (!reportPulseCircles.isEmpty()) {
+                reportCircleManager.delete(reportPulseCircles);
+            }
+            if (!reportCoreCircles.isEmpty()) {
+                reportCircleManager.delete(reportCoreCircles);
+            }
+        }
+        reportPulseCircles.clear();
+        reportCoreCircles.clear();
+    }
+
+    private void startReportPulseAnimationsIfNeeded() {
+        if (reportCircleManager == null || reportPulseCircles.isEmpty() || !reportPulseAnimators.isEmpty()) {
+            return;
+        }
+
+        ValueAnimator animator = ValueAnimator.ofFloat(0f, 1f);
+        animator.setDuration(REPORT_PULSE_DURATION_MS);
+        animator.setInterpolator(new AccelerateDecelerateInterpolator());
+        animator.setRepeatCount(ValueAnimator.INFINITE);
+        animator.setRepeatMode(ValueAnimator.RESTART);
+        animator.addUpdateListener(valueAnimator -> {
+            if (reportCircleManager == null || reportPulseCircles.isEmpty()) {
+                return;
+            }
+            float progress = (float) valueAnimator.getAnimatedValue();
+            float radius = REPORT_PULSE_MIN_RADIUS
+                    + ((REPORT_PULSE_MAX_RADIUS - REPORT_PULSE_MIN_RADIUS) * progress);
+            float opacity = 0.62f * (1f - progress);
+            for (Circle pulseCircle : reportPulseCircles) {
+                pulseCircle.setCircleRadius(radius);
+                pulseCircle.setCircleOpacity(opacity);
+            }
+            reportCircleManager.update(reportPulseCircles);
+        });
+        reportPulseAnimators.add(animator);
+        animator.start();
+    }
+
+    private void stopReportPulseAnimations() {
+        for (ValueAnimator animator : reportPulseAnimators) {
+            animator.cancel();
+        }
+        reportPulseAnimators.clear();
+    }
+
+    @Nullable
+    private NodeStyle resolveNodeStyle(@Nullable String rawStatus) {
+        String status = normalizeStatus(rawStatus);
+        if (status == null) {
+            return null;
+        }
+        if (SosRepository.TRANG_THAI_DANG_TREN_DUONG_TOI.equals(status)) {
+            return NodeStyle.RED;
+        }
+        if (SosRepository.TRANG_THAI_DANG_XU_LY.equals(status)) {
+            return NodeStyle.YELLOW;
+        }
+        if (SosRepository.TRANG_THAI_HOAN_THANH.equals(status)) {
+            return NodeStyle.GREEN;
+        }
+        if (SosRepository.TRANG_THAI_DA_NHAN.equals(status) || SosRepository.TRANG_THAI_HUY.equals(status)) {
+            return null;
+        }
+        return null;
+    }
+
+    @Nullable
+    private String normalizeStatus(@Nullable String rawStatus) {
+        if (rawStatus == null) {
+            return null;
+        }
+        String normalized = rawStatus.trim();
+        if (normalized.isEmpty()) {
+            return null;
+        }
+        return normalized.toUpperCase(Locale.ROOT);
+    }
+
+    private enum NodeStyle {
+        RED("#E53935"),
+        YELLOW("#FBC02D"),
+        GREEN("#2E7D32");
+
+        @NonNull
+        private final String colorHex;
+
+        NodeStyle(@NonNull String colorHex) {
+            this.colorHex = colorHex;
+        }
     }
 
     private boolean hasLocationPermission() {

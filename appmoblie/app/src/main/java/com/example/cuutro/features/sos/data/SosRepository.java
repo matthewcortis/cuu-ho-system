@@ -14,6 +14,7 @@ import com.example.cuutro.features.sos.data.remote.dto.PhieuCuuTroSummaryDto;
 import com.example.cuutro.features.sos.data.remote.dto.TrangThaiPhieuResponseDto;
 import com.example.cuutro.features.sos.model.EmergencyReportDetail;
 import com.example.cuutro.features.sos.model.EmergencyReportItem;
+import com.example.cuutro.features.sos.model.EmergencyReportMapNode;
 import com.example.cuutro.features.sos.model.EmergencyReportSupplyItem;
 
 import java.util.ArrayList;
@@ -66,6 +67,34 @@ public class SosRepository {
                             return;
                         }
                         callback.onSuccess(mapEmergencyReports(data));
+                    }
+
+                    @Override
+                    public void onError(@NonNull NetworkError error) {
+                        if (error.isUnauthorized()) {
+                            authRepository.clearSession();
+                        }
+                        callback.onError(error);
+                    }
+                }
+        );
+    }
+
+    public void getEmergencyReportMapNodes(@NonNull ResultCallback<List<EmergencyReportMapNode>> callback) {
+        if (!authRepository.hasActiveSession()) {
+            callback.onError(new NetworkError(401, "Vui lòng đăng nhập để xem vị trí phiếu cứu trợ"));
+            return;
+        }
+        networkCallExecutor.execute(
+                sosApiService.getEmergencyReports(),
+                new ResultCallback<List<PhieuCuuTroSummaryDto>>() {
+                    @Override
+                    public void onSuccess(List<PhieuCuuTroSummaryDto> data) {
+                        if (data == null) {
+                            callback.onSuccess(Collections.emptyList());
+                            return;
+                        }
+                        callback.onSuccess(mapEmergencyReportMapNodes(data));
                     }
 
                     @Override
@@ -173,6 +202,37 @@ public class SosRepository {
             ));
         }
         return reports;
+    }
+
+    @NonNull
+    private List<EmergencyReportMapNode> mapEmergencyReportMapNodes(
+            @NonNull List<PhieuCuuTroSummaryDto> responses
+    ) {
+        List<EmergencyReportMapNode> nodes = new ArrayList<>();
+        for (PhieuCuuTroSummaryDto response : responses) {
+            if (response == null || response.getViTri() == null) {
+                continue;
+            }
+            Double latitude = parseCoordinate(response.getViTri().getLat());
+            Double longitude = parseCoordinate(response.getViTri().getLongitude());
+            if (latitude == null || longitude == null) {
+                continue;
+            }
+            if (!isValidLatitude(latitude) || !isValidLongitude(longitude)) {
+                continue;
+            }
+
+            String reportId = response.getId() == null
+                    ? "local_" + nodes.size()
+                    : String.valueOf(response.getId());
+            nodes.add(new EmergencyReportMapNode(
+                    reportId,
+                    latitude,
+                    longitude,
+                    trimToNull(response.getTrangThai())
+            ));
+        }
+        return nodes;
     }
 
     @NonNull
@@ -489,6 +549,30 @@ public class SosRepository {
             }
         }
         return false;
+    }
+
+    private boolean isValidLatitude(double latitude) {
+        return latitude >= -90d && latitude <= 90d;
+    }
+
+    private boolean isValidLongitude(double longitude) {
+        return longitude >= -180d && longitude <= 180d;
+    }
+
+    @Nullable
+    private Double parseCoordinate(@Nullable String rawValue) {
+        String normalized = trimToNull(rawValue);
+        if (normalized == null) {
+            return null;
+        }
+        if (normalized.contains(",") && !normalized.contains(".")) {
+            normalized = normalized.replace(',', '.');
+        }
+        try {
+            return Double.parseDouble(normalized);
+        } catch (NumberFormatException ignored) {
+            return null;
+        }
     }
 
     private String fallbackIfBlank(@Nullable String value, @NonNull String fallback) {

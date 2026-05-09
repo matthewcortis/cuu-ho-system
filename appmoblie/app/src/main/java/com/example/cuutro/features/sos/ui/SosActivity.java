@@ -40,7 +40,6 @@ public class SosActivity extends AppCompatActivity {
 
         setupSosButton();
     }
-
     @Override
     protected void onStart() {
         super.onStart();

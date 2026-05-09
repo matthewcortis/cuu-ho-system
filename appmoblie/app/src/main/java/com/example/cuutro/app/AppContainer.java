@@ -9,6 +9,8 @@ import com.example.cuutro.core.network.NetworkCallExecutor;
 import com.example.cuutro.core.network.NetworkClientFactory;
 import com.example.cuutro.features.auth.data.AuthRepository;
 import com.example.cuutro.features.auth.data.remote.AuthApiService;
+import com.example.cuutro.features.captain.data.CaptainTeamRepository;
+import com.example.cuutro.features.captain.data.remote.CaptainTeamApiService;
 import com.example.cuutro.features.chat.data.ChatRepository;
 import com.example.cuutro.features.chat.data.remote.ChatApiService;
 import com.example.cuutro.features.profile.data.ProfileRepository;
@@ -27,6 +29,7 @@ public class AppContainer {
     private final SosRepository sosRepository;
     private final ReportRepository reportRepository;
     private final ChatRepository chatRepository;
+    private final CaptainTeamRepository captainTeamRepository;
 
     public AppContainer(@NonNull Context context) {
         Context appContext = context.getApplicationContext();
@@ -39,6 +42,7 @@ public class AppContainer {
         SosApiService sosApiService = retrofit.create(SosApiService.class);
         ReportApiService reportApiService = retrofit.create(ReportApiService.class);
         ChatApiService chatApiService = retrofit.create(ChatApiService.class);
+        CaptainTeamApiService captainTeamApiService = retrofit.create(CaptainTeamApiService.class);
 
         authRepository = new AuthRepository(authApiService, authSessionManager, networkCallExecutor);
         profileRepository = new ProfileRepository(
@@ -57,6 +61,11 @@ public class AppContainer {
         chatRepository = new ChatRepository(
                 appContext,
                 chatApiService,
+                authRepository,
+                networkCallExecutor
+        );
+        captainTeamRepository = new CaptainTeamRepository(
+                captainTeamApiService,
                 authRepository,
                 networkCallExecutor
         );
@@ -85,5 +94,10 @@ public class AppContainer {
     @NonNull
     public ChatRepository getChatRepository() {
         return chatRepository;
+    }
+
+    @NonNull
+    public CaptainTeamRepository getCaptainTeamRepository() {
+        return captainTeamRepository;
     }
 }

@@ -9,8 +9,14 @@ import {
   TRACK_ASIA_SCRIPT_URL,
   TRACK_ASIA_STYLE_URL,
 } from "@/api/trackAsia";
+import {
+  fetchPhieuCuuTroList,
+  NguoiDungApiError,
+  type PhieuCuuTroDto,
+} from "@/features/nguoi-dung/api/nguoiDungApi";
 
 type LocationStatus = "idle" | "requesting" | "granted" | "denied" | "error";
+type RescueMapStatus = "DANG_TREN_DUONG_TOI" | "DANG_XU_LY" | "HOAN_THANH";
 
 type TrackAsiaCenter = {
   lat: number;
@@ -30,6 +36,11 @@ interface TrackAsiaMarkerInstance {
   remove: () => void;
 }
 
+type TrackAsiaMarkerOptions = {
+  color?: string;
+  element?: HTMLElement;
+};
+
 interface TrackAsiaGlobal {
   Map: new (options: {
     container: string | HTMLElement;
@@ -37,7 +48,7 @@ interface TrackAsiaGlobal {
     center: TrackAsiaCenter;
     zoom: number;
   }) => TrackAsiaMapInstance;
-  Marker?: new (options?: { color?: string }) => TrackAsiaMarkerInstance;
+  Marker?: new (options?: TrackAsiaMarkerOptions) => TrackAsiaMarkerInstance;
 }
 
 declare global {
@@ -55,6 +66,152 @@ function ensureTrackAsiaCss(): void {
   linkElement.rel = "stylesheet";
   linkElement.href = TRACK_ASIA_CSS_URL;
   document.head.appendChild(linkElement);
+}
+
+function ensureRescueNodeStyles(): void {
+  const styleId = "trackasia-rescue-node-style";
+  if (document.getElementById(styleId)) return;
+
+  const styleElement = document.createElement("style");
+  styleElement.id = styleId;
+  styleElement.textContent = `
+    @keyframes rescueNodePulse {
+      0% { transform: translate(-50%, -50%) scale(0.5); opacity: 0.6; }
+      70% { transform: translate(-50%, -50%) scale(1.35); opacity: 0; }
+      100% { transform: translate(-50%, -50%) scale(1.35); opacity: 0; }
+    }
+
+    .rescue-map-node {
+      --node-color: #ef4444;
+      position: relative;
+      width: 22px;
+      height: 22px;
+      pointer-events: none;
+    }
+
+    .rescue-map-node--red { --node-color: #ef4444; }
+    .rescue-map-node--yellow { --node-color: #f59e0b; }
+    .rescue-map-node--green { --node-color: #22c55e; }
+
+    .rescue-map-node__pulse {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: 22px;
+      height: 22px;
+      border-radius: 999px;
+      background: var(--node-color);
+      opacity: 0;
+      animation: rescueNodePulse 1.8s ease-out infinite;
+    }
+
+    .rescue-map-node__pulse--2 {
+      animation-delay: 0.9s;
+    }
+
+    .rescue-map-node__core {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: 10px;
+      height: 10px;
+      border-radius: 999px;
+      transform: translate(-50%, -50%);
+      background: var(--node-color);
+      box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.92);
+    }
+  `;
+  document.head.appendChild(styleElement);
+}
+
+function normalizeTrangThaiPhieu(value: string | null | undefined): string {
+  if (typeof value !== "string") {
+    return "";
+  }
+  return value.trim().toUpperCase();
+}
+
+function parseCoordinate(value: string | null | undefined): number | null {
+  if (typeof value !== "string") {
+    return null;
+  }
+  const normalized = value.trim();
+  if (!normalized) {
+    return null;
+  }
+  const parsed = Number.parseFloat(
+    normalized.includes(",") && !normalized.includes(".")
+      ? normalized.replace(",", ".")
+      : normalized
+  );
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
+function resolveRescueMapStatus(value: string | null | undefined): RescueMapStatus | null {
+  const normalized = normalizeTrangThaiPhieu(value);
+  if (!normalized) {
+    return null;
+  }
+  if (normalized === "DANG_TREN_DUONG_TOI") {
+    return "DANG_TREN_DUONG_TOI";
+  }
+  if (normalized === "DANG_XU_LY" || normalized === "IN_PROGRESS" || normalized === "PROCESSING") {
+    return "DANG_XU_LY";
+  }
+  if (normalized === "HOAN_THANH" || normalized === "COMPLETED" || normalized === "DONE") {
+    return "HOAN_THANH";
+  }
+  return null;
+}
+
+function getRescueMarkerClassName(status: RescueMapStatus): string {
+  switch (status) {
+    case "DANG_XU_LY":
+      return "rescue-map-node rescue-map-node--yellow";
+    case "HOAN_THANH":
+      return "rescue-map-node rescue-map-node--green";
+    case "DANG_TREN_DUONG_TOI":
+    default:
+      return "rescue-map-node rescue-map-node--red";
+  }
+}
+
+function createRescueMarkerElement(status: RescueMapStatus): HTMLDivElement {
+  const element = document.createElement("div");
+  element.className = getRescueMarkerClassName(status);
+  element.innerHTML = `
+    <span class="rescue-map-node__pulse rescue-map-node__pulse--1"></span>
+    <span class="rescue-map-node__pulse rescue-map-node__pulse--2"></span>
+    <span class="rescue-map-node__core"></span>
+  `;
+  return element;
+}
+
+function toMapNodes(phieuList: PhieuCuuTroDto[]): Array<{ lat: number; lng: number; status: RescueMapStatus }> {
+  return phieuList
+    .map((phieu) => {
+      const status = resolveRescueMapStatus(phieu.trangThai);
+      const lat = parseCoordinate(phieu.viTri?.lat);
+      const lng = parseCoordinate(phieu.viTri?.longitude);
+      if (!status || lat === null || lng === null) {
+        return null;
+      }
+      if (lat < -90 || lat > 90 || lng < -180 || lng > 180) {
+        return null;
+      }
+      return { status, lat, lng };
+    })
+    .filter((item): item is { lat: number; lng: number; status: RescueMapStatus } => item !== null);
+}
+
+function getRescueMapErrorMessage(error: unknown): string {
+  if (error instanceof NguoiDungApiError) {
+    return error.message;
+  }
+  if (error instanceof Error && error.message) {
+    return error.message;
+  }
+  return "Khong the tai vi tri phieu cuu tro.";
 }
 
 function loadTrackAsiaSdk(): Promise<TrackAsiaGlobal> {
@@ -107,11 +264,13 @@ export default function     BanDoPage() {
   const mapContainerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<TrackAsiaMapInstance | null>(null);
   const markerRef = useRef<TrackAsiaMarkerInstance | null>(null);
+  const rescueMarkersRef = useRef<TrackAsiaMarkerInstance[]>([]);
 
   const [mapReady, setMapReady] = useState(false);
   const [mapError, setMapError] = useState("");
   const [locationStatus, setLocationStatus] = useState<LocationStatus>("idle");
   const [locationMessage, setLocationMessage] = useState("");
+  const [rescueMessage, setRescueMessage] = useState("");
 
   useEffect(() => {
     let disposed = false;
@@ -134,12 +293,72 @@ export default function     BanDoPage() {
 
     return () => {
       disposed = true;
+      rescueMarkersRef.current.forEach((marker) => marker.remove());
+      rescueMarkersRef.current = [];
       markerRef.current?.remove();
       markerRef.current = null;
       mapRef.current?.remove();
       mapRef.current = null;
     };
   }, []);
+
+  useEffect(() => {
+    if (!mapReady || !mapRef.current) {
+      return;
+    }
+
+    let cancelled = false;
+    setRescueMessage("Dang tai vi tri phieu cuu tro...");
+    ensureRescueNodeStyles();
+
+    const renderRescueMarkers = () => {
+      const map = mapRef.current;
+      const trackasia = window.trackasiagl;
+      const MarkerCtor = trackasia?.Marker;
+      if (!map || !MarkerCtor) {
+        setRescueMessage("Map marker chua san sang.");
+        return;
+      }
+
+      fetchPhieuCuuTroList()
+        .then((phieuList) => {
+          if (cancelled) {
+            return;
+          }
+
+          const nodes = toMapNodes(phieuList);
+          rescueMarkersRef.current.forEach((marker) => marker.remove());
+          rescueMarkersRef.current = [];
+
+          nodes.forEach((node) => {
+            const markerElement = createRescueMarkerElement(node.status);
+            const marker = new MarkerCtor({ element: markerElement })
+              .setLngLat([node.lng, node.lat])
+              .addTo(map);
+            rescueMarkersRef.current.push(marker);
+          });
+
+          setRescueMessage(
+            nodes.length > 0
+              ? `Dang hien thi ${nodes.length} vi tri phieu cuu tro.`
+              : "Khong co vi tri phieu cuu tro phu hop de hien thi."
+          );
+        })
+        .catch((error) => {
+          if (cancelled) {
+            return;
+          }
+          rescueMarkersRef.current.forEach((marker) => marker.remove());
+          rescueMarkersRef.current = [];
+          setRescueMessage(getRescueMapErrorMessage(error));
+        });
+    };
+
+    void renderRescueMarkers();
+    return () => {
+      cancelled = true;
+    };
+  }, [mapReady]);
 
   const handleLocateMe = () => {
     if (!mapRef.current) {
@@ -232,6 +451,12 @@ export default function     BanDoPage() {
                   {locationMessage}
                 </span>
               )}
+
+              {rescueMessage && (
+                <span className="text-theme-xs text-gray-600 dark:text-gray-300" aria-live="polite">
+                  {rescueMessage}
+                </span>
+              )}
             </div>
 
             <div
@@ -245,4 +470,3 @@ export default function     BanDoPage() {
     </>
   );
 }
-

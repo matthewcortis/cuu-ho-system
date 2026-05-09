@@ -5,6 +5,10 @@
         android:icon="@drawable/ic_nav_community"
         android:title="@string/nav_captain_member_messages" />
     <item
+        android:id="@+id/nav_captain_members"
+        android:icon="@drawable/ic_nav_member"
+        android:title="@string/nav_captain_members" />
+    <item
         android:id="@+id/nav_captain_me"
         android:icon="@drawable/ic_nav_profile"
         android:title="@string/nav_captain_me" />

@@ -15,12 +15,14 @@ import com.example.cuutro.R;
 import com.example.cuutro.app.MyApp;
 import com.example.cuutro.features.auth.data.AuthRepository;
 import com.example.cuutro.features.auth.ui.LoginActivity;
+import com.example.cuutro.features.captain.ui.CaptainMembersFragment;
 import com.example.cuutro.features.profile.ui.ProfileFragment;
 import com.google.android.material.bottomnavigation.BottomNavigationView;
 
 public class CaptainNavigationActivity extends AppCompatActivity {
 
     private static final String TAG_MEMBER_MESSAGES = "captain_tab_member_messages";
+    private static final String TAG_MEMBERS = "captain_tab_members";
     private static final String TAG_ME = "captain_tab_me";
 
     @NonNull
@@ -131,6 +133,9 @@ public class CaptainNavigationActivity extends AppCompatActivity {
         if (itemId == R.id.nav_captain_member_messages) {
             return TAG_MEMBER_MESSAGES;
         }
+        if (itemId == R.id.nav_captain_members) {
+            return TAG_MEMBERS;
+        }
         if (itemId == R.id.nav_captain_me) {
             return TAG_ME;
         }
@@ -141,6 +146,9 @@ public class CaptainNavigationActivity extends AppCompatActivity {
     private Fragment createFragment(int itemId) {
         if (itemId == R.id.nav_captain_member_messages) {
             return new CaptainMemberMessagesFragment();
+        }
+        if (itemId == R.id.nav_captain_members) {
+            return new CaptainMembersFragment();
         }
         if (itemId == R.id.nav_captain_me) {
             return new ProfileFragment();
