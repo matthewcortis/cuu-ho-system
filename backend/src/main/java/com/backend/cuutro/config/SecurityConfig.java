@@ -36,17 +36,25 @@ public class SecurityConfig implements WebMvcConfigurer {
 		http
 				.authorizeHttpRequests(auth -> auth
 						.requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
-						.requestMatchers(
-								"/auth/login",
-								"/v3/api-docs/**",
+							.requestMatchers(
+									"/auth/login",
+									"/auth/register",
+									"/auth/forgot-password",
+									"/v3/api-docs/**",
 								"/swagger-ui/**",
 								"/swagger-ui.html",
 								"/ws",
 								"/ws/**",
 								"/hello").permitAll()
-						.requestMatchers(HttpMethod.POST, "/phieu-cuu-tro", "/tep-tin/upload").permitAll()
-						.requestMatchers(HttpMethod.POST, "/loai-su-co/filter").permitAll()
-						.requestMatchers(HttpMethod.GET, "/vat-pham/**").permitAll()
+							.requestMatchers(HttpMethod.POST, "/phieu-cuu-tro", "/tep-tin/upload").permitAll()
+							.requestMatchers(HttpMethod.POST, "/loai-su-co/filter").permitAll()
+							.requestMatchers(HttpMethod.GET, "/bang-tin/quan-ly")
+							.hasAuthority(RoleType.ADMIN.name())
+							.requestMatchers(HttpMethod.DELETE, "/bang-tin/**")
+							.hasAuthority(RoleType.ADMIN.name())
+							.requestMatchers(HttpMethod.GET, "/bang-tin", "/bang-tin/**").permitAll()
+							.requestMatchers(HttpMethod.POST, "/bang-tin").authenticated()
+							.requestMatchers(HttpMethod.GET, "/vat-pham/**").permitAll()
 						.requestMatchers(HttpMethod.GET, "/nhom-vat-pham/**").permitAll()
 						.requestMatchers(HttpMethod.GET, "/doi-nhom/**")
 						.hasAnyAuthority(RoleType.ADMIN.name(), RoleType.TRUONG_NHOM_TNV.name())

@@ -9,6 +9,8 @@ import android.widget.Button;
 import android.widget.EditText;
 import android.widget.Toast;
 
+import androidx.activity.result.ActivityResultLauncher;
+import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.activity.EdgeToEdge;
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
@@ -32,6 +34,56 @@ public class LoginActivity extends AppCompatActivity {
     private CharSequence defaultLoginButtonText;
     private AuthRepository authRepository;
     private boolean isLoading;
+    private final ActivityResultLauncher<Intent> registerLauncher =
+            registerForActivityResult(
+                    new ActivityResultContracts.StartActivityForResult(),
+                    result -> {
+                        Intent data = result.getData();
+                        if (result.getResultCode() != RESULT_OK || data == null) {
+                            return;
+                        }
+                        String registeredUsername =
+                                data.getStringExtra(RegisterActivity.EXTRA_REGISTERED_USERNAME);
+                        if (registeredUsername != null && !registeredUsername.trim().isEmpty()
+                                && emailEditText != null) {
+                            emailEditText.setText(registeredUsername);
+                            emailEditText.setSelection(registeredUsername.length());
+                        }
+                        if (passwordEditText != null) {
+                            passwordEditText.setText("");
+                        }
+                        Toast.makeText(
+                                this,
+                                R.string.register_success_return_login,
+                                Toast.LENGTH_SHORT
+                        ).show();
+                    }
+            );
+    private final ActivityResultLauncher<Intent> forgotPasswordLauncher =
+            registerForActivityResult(
+                    new ActivityResultContracts.StartActivityForResult(),
+                    result -> {
+                        Intent data = result.getData();
+                        if (result.getResultCode() != RESULT_OK || data == null) {
+                            return;
+                        }
+                        String resetEmail =
+                                data.getStringExtra(ForgotPasswordActivity.EXTRA_RESET_EMAIL);
+                        if (resetEmail != null && !resetEmail.trim().isEmpty()
+                                && emailEditText != null) {
+                            emailEditText.setText(resetEmail);
+                            emailEditText.setSelection(resetEmail.length());
+                        }
+                        if (passwordEditText != null) {
+                            passwordEditText.setText("");
+                        }
+                        Toast.makeText(
+                                this,
+                                R.string.forgot_password_return_login,
+                                Toast.LENGTH_SHORT
+                        ).show();
+                    }
+            );
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -76,14 +128,14 @@ public class LoginActivity extends AppCompatActivity {
         View forgotPasswordView = findViewById(R.id.tv_forgot_password);
         if (forgotPasswordView != null) {
             forgotPasswordView.setOnClickListener(v ->
-                    Toast.makeText(this, R.string.login_forgot_password_not_ready, Toast.LENGTH_SHORT).show()
+                    forgotPasswordLauncher.launch(new Intent(this, ForgotPasswordActivity.class))
             );
         }
 
         View signUpView = findViewById(R.id.tv_sign_up);
         if (signUpView != null) {
             signUpView.setOnClickListener(v ->
-                    Toast.makeText(this, R.string.login_sign_up_not_ready, Toast.LENGTH_SHORT).show()
+                    registerLauncher.launch(new Intent(this, RegisterActivity.class))
             );
         }
 

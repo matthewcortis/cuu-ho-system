@@ -11,6 +11,10 @@ public class EmergencyReportMapNode {
     private final double longitude;
     @Nullable
     private final String status;
+    @Nullable
+    private final Double captainLatitude;
+    @Nullable
+    private final Double captainLongitude;
 
     public EmergencyReportMapNode(
             @NonNull String reportId,
@@ -18,10 +22,23 @@ public class EmergencyReportMapNode {
             double longitude,
             @Nullable String status
     ) {
+        this(reportId, latitude, longitude, status, null, null);
+    }
+
+    public EmergencyReportMapNode(
+            @NonNull String reportId,
+            double latitude,
+            double longitude,
+            @Nullable String status,
+            @Nullable Double captainLatitude,
+            @Nullable Double captainLongitude
+    ) {
         this.reportId = reportId;
         this.latitude = latitude;
         this.longitude = longitude;
         this.status = status;
+        this.captainLatitude = captainLatitude;
+        this.captainLongitude = captainLongitude;
     }
 
     @NonNull
@@ -40,5 +57,15 @@ public class EmergencyReportMapNode {
     @Nullable
     public String getStatus() {
         return status;
+    }
+
+    @Nullable
+    public Double getCaptainLatitude() {
+        return captainLatitude;
+    }
+
+    @Nullable
+    public Double getCaptainLongitude() {
+        return captainLongitude;
     }
 }

@@ -11,8 +11,11 @@ import com.example.cuutro.core.network.NetworkCallExecutor;
 import com.example.cuutro.core.network.NetworkError;
 import com.example.cuutro.core.network.ResultCallback;
 import com.example.cuutro.features.auth.data.remote.AuthApiService;
+import com.example.cuutro.features.auth.data.remote.dto.ForgotPasswordRequestDto;
 import com.example.cuutro.features.auth.data.remote.dto.LoginRequestDto;
 import com.example.cuutro.features.auth.data.remote.dto.LoginResponseDto;
+import com.example.cuutro.features.auth.data.remote.dto.RegisterRequestDto;
+import com.example.cuutro.features.auth.data.remote.dto.RegisterResponseDto;
 
 import java.time.Instant;
 import java.time.format.DateTimeParseException;
@@ -120,6 +123,81 @@ public class AuthRepository {
                 BackendConfig.getBootstrapPassword()
         );
         requestLogin(request, callback);
+    }
+
+    public void register(
+            @Nullable String fullName,
+            @Nullable String username,
+            @Nullable String email,
+            @Nullable String password,
+            @NonNull ResultCallback<Void> callback
+    ) {
+        String safeFullName = fullName == null ? "" : fullName.trim();
+        String safeUsername = username == null ? "" : username.trim();
+        String safeEmail = email == null ? "" : email.trim();
+        String safePassword = password == null ? "" : password.trim();
+
+        if (safeFullName.isEmpty() || safeUsername.isEmpty()
+                || safeEmail.isEmpty() || safePassword.isEmpty()) {
+            callback.onError(new NetworkError(
+                    400,
+                    "Vui lòng nhập đầy đủ thông tin đăng ký"
+            ));
+            return;
+        }
+
+        networkCallExecutor.execute(
+                authApiService.register(
+                        "true",
+                        new RegisterRequestDto(safeFullName, safeUsername, safeEmail, safePassword)
+                ),
+                new ResultCallback<RegisterResponseDto>() {
+                    @Override
+                    public void onSuccess(RegisterResponseDto data) {
+                        callback.onSuccess(null);
+                    }
+
+                    @Override
+                    public void onError(@NonNull NetworkError error) {
+                        callback.onError(error);
+                    }
+                }
+        );
+    }
+
+    public void forgotPassword(
+            @Nullable String email,
+            @Nullable String newPassword,
+            @NonNull ResultCallback<Void> callback
+    ) {
+        String safeEmail = email == null ? "" : email.trim();
+        String safeNewPassword = newPassword == null ? "" : newPassword.trim();
+
+        if (safeEmail.isEmpty() || safeNewPassword.isEmpty()) {
+            callback.onError(new NetworkError(
+                    400,
+                    "Vui lòng nhập email và mật khẩu mới"
+            ));
+            return;
+        }
+
+        networkCallExecutor.execute(
+                authApiService.forgotPassword(
+                        "true",
+                        new ForgotPasswordRequestDto(safeEmail, safeNewPassword)
+                ),
+                new ResultCallback<Object>() {
+                    @Override
+                    public void onSuccess(Object data) {
+                        callback.onSuccess(null);
+                    }
+
+                    @Override
+                    public void onError(@NonNull NetworkError error) {
+                        callback.onError(error);
+                    }
+                }
+        );
     }
 
     private void requestLogin(

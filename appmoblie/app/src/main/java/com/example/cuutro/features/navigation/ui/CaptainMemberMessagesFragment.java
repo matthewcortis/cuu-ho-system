@@ -60,6 +60,15 @@ public class CaptainMemberMessagesFragment extends Fragment {
         loadMemberMessageReports();
     }
 
+    @Override
+    public void onDestroyView() {
+        if (adapter != null) {
+            adapter.release();
+            adapter = null;
+        }
+        super.onDestroyView();
+    }
+
     private void setupRecyclerView(@NonNull View root) {
         RecyclerView recyclerView = root.findViewById(R.id.rvCaptainMemberMessages);
         adapter = new EmergencyReportAdapter(new EmergencyReportAdapter.Listener() {

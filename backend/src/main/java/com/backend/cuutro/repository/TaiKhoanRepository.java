@@ -12,5 +12,9 @@ import com.backend.cuutro.entities.TaiKhoanEntity;
 public interface TaiKhoanRepository extends JpaRepository<TaiKhoanEntity, Long>, JpaSpecificationExecutor<TaiKhoanEntity> {
 
 	Optional<TaiKhoanEntity> findByTenDangNhapIgnoreCaseOrEmailIgnoreCase(String tenDangNhap, String email);
+
+	Optional<TaiKhoanEntity> findByTenDangNhapIgnoreCase(String tenDangNhap);
+
+	Optional<TaiKhoanEntity> findByEmailIgnoreCase(String email);
 }
  

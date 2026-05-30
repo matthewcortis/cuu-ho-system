@@ -31,6 +31,7 @@ public class PhieuCuuTroDto implements Serializable {
 	NguoiGuiDto nguoiGui;
 	String ghiChu;
 	String trangThai;
+	PhanCongDto phanCong;
 	List<PhieuCuuTroChiTietDto> chiTietCuuTro;
 	Instant createdAt;
 

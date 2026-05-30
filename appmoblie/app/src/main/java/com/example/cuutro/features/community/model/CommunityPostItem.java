@@ -2,17 +2,22 @@ package com.example.cuutro.features.community.model;
 
 import androidx.annotation.DrawableRes;
 import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 
 public class CommunityPostItem {
 
     private final String id;
     @DrawableRes
     private final int authorAvatarResId;
+    @Nullable
+    private final String authorAvatarUrl;
     private final String authorName;
     private final boolean verified;
     private final String location;
     @DrawableRes
     private final int imageResId;
+    @Nullable
+    private final String imageUrl;
     private final String mediaCounter;
     private final String likedByText;
     private final String captionText;
@@ -21,10 +26,12 @@ public class CommunityPostItem {
     public CommunityPostItem(
             @NonNull String id,
             @DrawableRes int authorAvatarResId,
+            @Nullable String authorAvatarUrl,
             @NonNull String authorName,
             boolean verified,
             @NonNull String location,
             @DrawableRes int imageResId,
+            @Nullable String imageUrl,
             @NonNull String mediaCounter,
             @NonNull String likedByText,
             @NonNull String captionText,
@@ -32,10 +39,12 @@ public class CommunityPostItem {
     ) {
         this.id = id;
         this.authorAvatarResId = authorAvatarResId;
+        this.authorAvatarUrl = authorAvatarUrl;
         this.authorName = authorName;
         this.verified = verified;
         this.location = location;
         this.imageResId = imageResId;
+        this.imageUrl = imageUrl;
         this.mediaCounter = mediaCounter;
         this.likedByText = likedByText;
         this.captionText = captionText;
@@ -49,6 +58,11 @@ public class CommunityPostItem {
 
     public int getAuthorAvatarResId() {
         return authorAvatarResId;
+    }
+
+    @Nullable
+    public String getAuthorAvatarUrl() {
+        return authorAvatarUrl;
     }
 
     @NonNull
@@ -67,6 +81,11 @@ public class CommunityPostItem {
 
     public int getImageResId() {
         return imageResId;
+    }
+
+    @Nullable
+    public String getImageUrl() {
+        return imageUrl;
     }
 
     @NonNull

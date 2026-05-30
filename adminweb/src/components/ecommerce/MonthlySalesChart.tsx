@@ -3,9 +3,39 @@ import { ApexOptions } from "apexcharts";
 import { Dropdown } from "@/components/ui/dropdown/Dropdown";
 import { DropdownItem } from "@/components/ui/dropdown/DropdownItem";
 import { MoreDotIcon } from "@/icons";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { fetchPhieuCuuTroList } from "@/features/nguoi-dung/api/nguoiDungApi";
 
 export default function MonthlySalesChart() {
+  const [isOpen, setIsOpen] = useState(false);
+  const [chartData, setChartData] = useState<number[]>(Array(12).fill(0));
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const rescues = await fetchPhieuCuuTroList();
+        
+        const monthlyCounts = Array(12).fill(0);
+        const currentYear = new Date().getFullYear();
+
+        rescues.forEach(rescue => {
+          if (rescue.createdAt) {
+            const date = new Date(rescue.createdAt);
+            if (date.getFullYear() === currentYear) {
+              const monthIndex = date.getMonth(); // 0-11
+              monthlyCounts[monthIndex] += 1;
+            }
+          }
+        });
+        
+        setChartData(monthlyCounts);
+      } catch (error) {
+        console.error("Error fetching rescue data:", error);
+      }
+    };
+    fetchData();
+  }, []);
+
   const options: ApexOptions = {
     colors: ["#465fff"],
     chart: {
@@ -35,18 +65,18 @@ export default function MonthlySalesChart() {
     },
     xaxis: {
       categories: [
-        "Jan",
-        "Feb",
-        "Mar",
-        "Apr",
-        "May",
-        "Jun",
-        "Jul",
-        "Aug",
-        "Sep",
-        "Oct",
-        "Nov",
-        "Dec",
+        "Tháng 1",
+        "Tháng 2",
+        "Tháng 3",
+        "Tháng 4",
+        "Tháng 5",
+        "Tháng 6",
+        "Tháng 7",
+        "Tháng 8",
+        "Tháng 9",
+        "Tháng 10",
+        "Tháng 11",
+        "Tháng 12",
       ],
       axisBorder: {
         show: false,
@@ -89,11 +119,10 @@ export default function MonthlySalesChart() {
   };
   const series = [
     {
-      name: "Sales",
-      data: [168, 385, 201, 298, 187, 195, 291, 110, 215, 390, 280, 112],
+      name: "Phiếu cứu hộ",
+      data: chartData,
     },
   ];
-  const [isOpen, setIsOpen] = useState(false);
 
   function toggleDropdown() {
     setIsOpen(!isOpen);
@@ -106,7 +135,7 @@ export default function MonthlySalesChart() {
     <div className="overflow-hidden rounded-2xl border border-gray-200 bg-white px-5 pt-5 dark:border-gray-800 dark:bg-white/[0.03] sm:px-6 sm:pt-6">
       <div className="flex items-center justify-between">
         <h3 className="text-lg font-semibold text-gray-800 dark:text-white/90">
-          Monthly Sales
+          Thống kê phiếu cứu hộ theo tháng
         </h3>
         <div className="relative inline-block">
           <button className="dropdown-toggle" onClick={toggleDropdown}>

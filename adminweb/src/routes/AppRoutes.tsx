@@ -33,6 +33,7 @@ import NhomVatPhamPage from "@/features/vat-pham/pages/NhomVatPham";
 import DanhSachVatPhamPage from "@/features/vat-pham/pages/DanhSachVatPham";
 import ThemVatPhamPage from "@/features/vat-pham/pages/ThemVatPham";
 import LoaiSuCoPage from "@/features/loai_su_co/pages/loai_su_co";
+import QuanLyBangTinPage from "@/features/bang-tin/pages/QuanLyBangTin";
 
 export default function AppRoutes() {
   return (
@@ -54,6 +55,7 @@ export default function AppRoutes() {
             <Route path="/nhom-vat-pham" element={<NhomVatPhamPage />} />
             <Route path="/don-vi-vat-pham" element={<DonViPage />} />
             <Route path="/loai-su-co" element={<LoaiSuCoPage />} />
+            <Route path="/quan-ly-bang-tin" element={<QuanLyBangTinPage />} />
             <Route path="/danh-sach-vat-pham" element={<DanhSachVatPhamPage />} />
             <Route path="/them-vat-pham" element={<ThemVatPhamPage />} />
 

@@ -13,6 +13,8 @@ import com.example.cuutro.features.captain.data.CaptainTeamRepository;
 import com.example.cuutro.features.captain.data.remote.CaptainTeamApiService;
 import com.example.cuutro.features.chat.data.ChatRepository;
 import com.example.cuutro.features.chat.data.remote.ChatApiService;
+import com.example.cuutro.features.community.data.CommunityRepository;
+import com.example.cuutro.features.community.data.remote.CommunityApiService;
 import com.example.cuutro.features.profile.data.ProfileRepository;
 import com.example.cuutro.features.profile.data.remote.ProfileApiService;
 import com.example.cuutro.features.report.data.ReportRepository;
@@ -30,6 +32,7 @@ public class AppContainer {
     private final ReportRepository reportRepository;
     private final ChatRepository chatRepository;
     private final CaptainTeamRepository captainTeamRepository;
+    private final CommunityRepository communityRepository;
 
     public AppContainer(@NonNull Context context) {
         Context appContext = context.getApplicationContext();
@@ -43,6 +46,7 @@ public class AppContainer {
         ReportApiService reportApiService = retrofit.create(ReportApiService.class);
         ChatApiService chatApiService = retrofit.create(ChatApiService.class);
         CaptainTeamApiService captainTeamApiService = retrofit.create(CaptainTeamApiService.class);
+        CommunityApiService communityApiService = retrofit.create(CommunityApiService.class);
 
         authRepository = new AuthRepository(authApiService, authSessionManager, networkCallExecutor);
         profileRepository = new ProfileRepository(
@@ -66,6 +70,12 @@ public class AppContainer {
         );
         captainTeamRepository = new CaptainTeamRepository(
                 captainTeamApiService,
+                authRepository,
+                networkCallExecutor
+        );
+        communityRepository = new CommunityRepository(
+                appContext,
+                communityApiService,
                 authRepository,
                 networkCallExecutor
         );
@@ -99,5 +109,10 @@ public class AppContainer {
     @NonNull
     public CaptainTeamRepository getCaptainTeamRepository() {
         return captainTeamRepository;
+    }
+
+    @NonNull
+    public CommunityRepository getCommunityRepository() {
+        return communityRepository;
     }
 }

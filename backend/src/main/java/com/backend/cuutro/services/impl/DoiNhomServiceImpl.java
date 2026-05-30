@@ -326,7 +326,21 @@ public class DoiNhomServiceImpl implements DoiNhomService {
 				.ten(ten)
 				.sdt(sdt)
 				.avatarUrl(avatarUrl)
+				.viTri(toViTriDto(nguoiDung != null ? nguoiDung.getViTri() : null))
 				.vaiTro(vaiTro)
+				.build();
+	}
+
+	private com.backend.cuutro.dto.response.entities.ViTriDto toViTriDto(ViTriEntity viTri) {
+		if (viTri == null) {
+			return null;
+		}
+		return com.backend.cuutro.dto.response.entities.ViTriDto.builder()
+				.id(viTri.getId())
+				.lat(viTri.getLat())
+				.longitude(viTri.getLongitude())
+				.diaChi(viTri.getDiaChi())
+				.createdAt(viTri.getCreatedAt())
 				.build();
 	}
 }

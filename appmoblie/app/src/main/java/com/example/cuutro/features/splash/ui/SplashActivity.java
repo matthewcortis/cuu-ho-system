@@ -12,6 +12,7 @@ import com.example.cuutro.app.MyApp;
 import com.example.cuutro.features.auth.data.AuthRepository;
 import com.example.cuutro.features.navigation.ui.CaptainNavigationActivity;
 import com.example.cuutro.features.navigation.ui.NavActivity;
+import com.example.cuutro.features.splash.data.TermsConsentManager;
 
 public class SplashActivity extends AppCompatActivity {
 
@@ -21,6 +22,11 @@ public class SplashActivity extends AppCompatActivity {
 
     private final Runnable navigateToNextScreen = () -> {
         if (isFinishing() || isDestroyed()) {
+            return;
+        }
+        if (!TermsConsentManager.hasAcceptedTerms(SplashActivity.this)) {
+            startActivity(new Intent(SplashActivity.this, TermsActivity.class));
+            finish();
             return;
         }
         Class<?> destination = resolveDestinationByRole();

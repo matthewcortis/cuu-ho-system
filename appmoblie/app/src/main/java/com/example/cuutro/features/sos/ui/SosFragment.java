@@ -44,6 +44,15 @@ public class SosFragment extends Fragment {
     }
 
     @Override
+    public void onDestroyView() {
+        if (adapter != null) {
+            adapter.release();
+            adapter = null;
+        }
+        super.onDestroyView();
+    }
+
+    @Override
     public void onViewCreated(@NonNull View view, Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
 

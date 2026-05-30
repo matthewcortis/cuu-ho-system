@@ -3,7 +3,9 @@ package com.backend.cuutro.services;
 import java.util.ArrayList;
 import java.time.Instant;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
@@ -34,23 +36,30 @@ import com.backend.cuutro.dto.request.TaoChiTietCuuTroRequest;
 import com.backend.cuutro.dto.request.TaoPhieuHoTroRequest;
 import com.backend.cuutro.dto.request.TaoPhieuHoTroTepTinRequest;
 import com.backend.cuutro.dto.response.entities.NguoiGuiDto;
+import com.backend.cuutro.dto.response.entities.NguoiDungDto;
+import com.backend.cuutro.dto.response.entities.DoiNhomThanhVienDto;
 import com.backend.cuutro.dto.response.entities.PhanCongDto;
 import com.backend.cuutro.dto.response.entities.PhieuCuuTroChiTietDto;
 import com.backend.cuutro.dto.response.entities.PhieuCuuTroDto;
+import com.backend.cuutro.dto.response.entities.TaiKhoanDto;
 import com.backend.cuutro.dto.response.entities.TrangThaiDangGoTinNhanResponse;
 import com.backend.cuutro.dto.response.entities.TinNhanChuaDocResponse;
 import com.backend.cuutro.dto.response.entities.TinNhanDaXemResponse;
 import com.backend.cuutro.dto.response.entities.TinNhanDto;
 import com.backend.cuutro.dto.response.entities.TrangThaiPhieuResponse;
+import com.backend.cuutro.dto.response.entities.ViTriDto;
 import com.backend.cuutro.entities.ChiTietCuuTroEntity;
 import com.backend.cuutro.entities.DoiNhomEntity;
+import com.backend.cuutro.entities.DoiNhomTinhNguyenVienEntity;
 import com.backend.cuutro.entities.NguoiDungEntity;
 import com.backend.cuutro.entities.PhanCongEntity;
 import com.backend.cuutro.entities.PhieuCuuTroEntity;
 import com.backend.cuutro.entities.PhieuCuuTroTepTinEntity;
 import com.backend.cuutro.entities.TepTinEntity;
+import com.backend.cuutro.entities.TinhNguyenVienEntity;
 import com.backend.cuutro.entities.TinNhanDaXemEntity;
 import com.backend.cuutro.entities.TinNhanEntity;
+import com.backend.cuutro.entities.VatPhamEntity;
 import com.backend.cuutro.entities.ViTriEntity;
 import com.backend.cuutro.exception.customize.InvalidFieldException;
 import com.backend.cuutro.mapper.PhanCongMapper;
@@ -189,6 +198,7 @@ public class PhieuCuuTroService {
 			throw new InvalidFieldException("Chi duoc nhan nhiem vu khi phieu dang CHO_DIEU_PHOI");
 		}
 
+		truTonKhoVatPhamChoPhieu(phieu.getId());
 		phieu.setTrangThai(PHIEU_TRANG_THAI_ASSIGNED_DB);
 		phieuCuuTroRepository.save(phieu);
 		phanCong.setTrangThai(TrangThaiPhieuHoTro.DA_NHAN.name());
@@ -227,6 +237,9 @@ public class PhieuCuuTroService {
 			return buildTrangThaiResponse(phieu, phanCong);
 		}
 		validateLuotTrangThai(hienTai, moi);
+		if (moi == TrangThaiPhieuHoTro.HUY && daTruTonKhoVatPham(hienTai)) {
+			congLaiTonKhoVatPhamChoPhieu(phieu.getId());
+		}
 
 		phieu.setTrangThai(toDbTrangThai(moi));
 		phieuCuuTroRepository.save(phieu);
@@ -245,9 +258,11 @@ public class PhieuCuuTroService {
 
 	public PhieuCuuTroDto getById(Long phieuId) {
 		PhieuCuuTroEntity phieu = getPhieuOrThrow(phieuId);
+		PhanCongEntity phanCong = phanCongRepository.findByPhieuCuuTro_Id(phieuId).orElse(null);
 		PhieuCuuTroDto dto = phieuCuuTroMapper.toDto(phieu);
 		dto.setNguoiGui(buildNguoiGuiDto(phieu));
-		dto.setTrangThai(getTrangThaiNghiepVu(phieu, phanCongRepository.findByPhieuCuuTro_Id(phieuId).orElse(null)).name());
+		dto.setTrangThai(getTrangThaiNghiepVu(phieu, phanCong).name());
+		dto.setPhanCong(buildPhanCongDtoForResponse(phanCong));
 		dto.setChiTietCuuTro(toChiTietDtos(chiTietCuuTroRepository.findByPhieuCuuTro_IdOrderByIdAsc(phieuId)));
 		return dto;
 	}
@@ -257,15 +272,78 @@ public class PhieuCuuTroService {
 		List<PhieuCuuTroDto> dtoList = phieuCuuTroMapper.toDtoList(entities);
 		for (int i = 0; i < entities.size(); i++) {
 			PhieuCuuTroEntity entity = entities.get(i);
+			PhanCongEntity phanCong = phanCongRepository.findByPhieuCuuTro_Id(entity.getId()).orElse(null);
 			TrangThaiPhieuHoTro trangThai = getTrangThaiNghiepVu(
 					entity,
-					phanCongRepository.findByPhieuCuuTro_Id(entity.getId()).orElse(null));
+					phanCong);
 			dtoList.get(i).setNguoiGui(buildNguoiGuiDto(entity));
 			dtoList.get(i).setTrangThai(trangThai.name());
+			dtoList.get(i).setPhanCong(buildPhanCongDtoForResponse(phanCong));
 			dtoList.get(i).setChiTietCuuTro(
 					toChiTietDtos(chiTietCuuTroRepository.findByPhieuCuuTro_IdOrderByIdAsc(entity.getId())));
 		}
 		return dtoList;
+	}
+
+	private PhanCongDto buildPhanCongDtoForResponse(PhanCongEntity phanCong) {
+		if (phanCong == null) {
+			return null;
+		}
+		PhanCongDto dto = phanCongMapper.toDto(phanCong);
+		if (dto == null) {
+			return null;
+		}
+		dto.setPhieuCuuTro(null);
+		enrichCaptainIntoAssignedTeam(dto);
+		return dto;
+	}
+
+	private void enrichCaptainIntoAssignedTeam(PhanCongDto phanCongDto) {
+		if (phanCongDto.getDoiNhom() == null || phanCongDto.getDoiNhom().getId() == null) {
+			return;
+		}
+		Long doiNhomId = phanCongDto.getDoiNhom().getId();
+		doiNhomTinhNguyenVienRepository.findFirstByDoiNhom_IdAndVaiTro(doiNhomId, DOI_TRUONG_VAI_TRO)
+				.ifPresent(leaderMapping -> phanCongDto.getDoiNhom().setDoiTruong(toDoiTruongDto(leaderMapping)));
+	}
+
+	private DoiNhomThanhVienDto toDoiTruongDto(DoiNhomTinhNguyenVienEntity leaderMapping) {
+		if (leaderMapping == null || leaderMapping.getTinhNguyenVien() == null) {
+			return null;
+		}
+		TinhNguyenVienEntity tinhNguyenVien = leaderMapping.getTinhNguyenVien();
+		NguoiDungEntity nguoiDung = tinhNguyenVien.getNguoiDung();
+		String defaultTen = "Tinh nguyen vien #" + tinhNguyenVien.getId();
+		String ten = nguoiDung != null && StringUtils.hasText(nguoiDung.getTen())
+				? nguoiDung.getTen().trim()
+				: defaultTen;
+		String sdt = nguoiDung != null && StringUtils.hasText(nguoiDung.getSdt())
+				? nguoiDung.getSdt().trim()
+				: "";
+		String avatarUrl = nguoiDung != null && StringUtils.hasText(nguoiDung.getAvatarUrl())
+				? nguoiDung.getAvatarUrl().trim()
+				: "";
+		return DoiNhomThanhVienDto.builder()
+				.tinhNguyenVienId(tinhNguyenVien.getId())
+				.ten(ten)
+				.sdt(sdt)
+				.avatarUrl(avatarUrl)
+				.viTri(toViTriDto(nguoiDung != null ? nguoiDung.getViTri() : null))
+				.vaiTro(DOI_TRUONG_VAI_TRO)
+				.build();
+	}
+
+	private ViTriDto toViTriDto(ViTriEntity viTri) {
+		if (viTri == null) {
+			return null;
+		}
+		return ViTriDto.builder()
+				.id(viTri.getId())
+				.lat(viTri.getLat())
+				.longitude(viTri.getLongitude())
+				.diaChi(viTri.getDiaChi())
+				.createdAt(viTri.getCreatedAt())
+				.build();
 	}
 
 	private List<PhieuCuuTroEntity> resolveDanhSachPhieuTheoNguoiDungHienTai() {
@@ -343,7 +421,7 @@ public class PhieuCuuTroService {
 		entity.setLoaiTinNhan(resolveLoaiTinNhan(coNoiDung, coMedia, coViTri));
 		entity.setMediaUrl(tepTin != null ? tepTin.getDuongDan() : null);
 		entity.setMediaType(tepTin != null ? tepTin.getLoaiTepTin() : null);
-		TinNhanDto tinNhanDto = tinNhanMapper.toDto(tinNhanRepository.save(entity));
+		TinNhanDto tinNhanDto = compactTinNhanForResponse(tinNhanMapper.toDto(tinNhanRepository.save(entity)));
 		tinNhanRealtimePublisher.publishTinNhan(phieuId, tinNhanDto);
 		return tinNhanDto;
 	}
@@ -360,7 +438,43 @@ public class PhieuCuuTroService {
 		PhieuCuuTroEntity phieu = getPhieuOrThrow(phieuId);
 		NguoiDungEntity sender = getNguoiDungByTaiKhoanIdOrThrow(taiKhoanId);
 		validateCoQuyenChat(phieu, sender, roles);
-		return tinNhanMapper.toDtoList(tinNhanRepository.findByPhieuCuuTro_IdOrderByCreatedAtAsc(phieuId));
+		return tinNhanRepository.findByPhieuCuuTro_IdOrderByCreatedAtAsc(phieuId)
+				.stream()
+				.map(tinNhanMapper::toDto)
+				.map(this::compactTinNhanForResponse)
+				.toList();
+	}
+
+	private TinNhanDto compactTinNhanForResponse(TinNhanDto dto) {
+		if (dto == null) {
+			return null;
+		}
+		dto.setPhieuCuuTro(null);
+		dto.setSender(compactSenderForTinNhan(dto.getSender()));
+		return dto;
+	}
+
+	private NguoiDungDto compactSenderForTinNhan(NguoiDungDto sender) {
+		if (sender == null) {
+			return null;
+		}
+		return NguoiDungDto.builder()
+				.id(sender.getId())
+				.ten(StringUtils.hasText(sender.getTen()) ? sender.getTen().trim() : "")
+				.avatarUrl(StringUtils.hasText(sender.getAvatarUrl()) ? sender.getAvatarUrl().trim() : "")
+				.taiKhoan(compactTaiKhoanForTinNhan(sender.getTaiKhoan()))
+				.build();
+	}
+
+	private TaiKhoanDto compactTaiKhoanForTinNhan(TaiKhoanDto taiKhoan) {
+		if (taiKhoan == null) {
+			return null;
+		}
+		return TaiKhoanDto.builder()
+				.id(taiKhoan.getId())
+				.tenDangNhap(StringUtils.hasText(taiKhoan.getTenDangNhap()) ? taiKhoan.getTenDangNhap().trim() : "")
+				.vaiTro(taiKhoan.getVaiTro())
+				.build();
 	}
 
 	public void validateCoQuyenChat(Long phieuId, Long taiKhoanId, Set<String> roles) {
@@ -582,6 +696,95 @@ public class PhieuCuuTroService {
 		}
 
 		return chiTietEntities;
+	}
+
+	private void truTonKhoVatPhamChoPhieu(Long phieuId) {
+		Map<Long, Integer> soLuongYeuCauTheoVatPham = tongHopSoLuongVatPhamTheoPhieu(phieuId);
+		List<VatPhamEntity> vatPhamCanKhoa = vatPhamRepository.findAllByIdInForUpdate(soLuongYeuCauTheoVatPham.keySet());
+		Map<Long, VatPhamEntity> vatPhamById = vatPhamCanKhoa.stream()
+				.collect(Collectors.toMap(VatPhamEntity::getId, item -> item));
+
+		for (Map.Entry<Long, Integer> entry : soLuongYeuCauTheoVatPham.entrySet()) {
+			Long vatPhamId = entry.getKey();
+			VatPhamEntity vatPham = vatPhamById.get(vatPhamId);
+			if (vatPham == null) {
+				throw new EntityNotFoundException("VatPham not found with id=" + vatPhamId);
+			}
+
+			int tonKhoHienTai = vatPham.getSoLuong() == null ? 0 : vatPham.getSoLuong();
+			if (tonKhoHienTai < 0) {
+				throw new InvalidFieldException("So luong ton kho khong hop le cho vat pham id=" + vatPhamId);
+			}
+
+			int soLuongYeuCau = entry.getValue();
+			if (tonKhoHienTai < soLuongYeuCau) {
+				String tenVatPham = StringUtils.hasText(vatPham.getTenVatPham()) ? vatPham.getTenVatPham().trim()
+						: ("VatPham#" + vatPhamId);
+				throw new InvalidFieldException(
+						"Khong du ton kho cho vat pham '" + tenVatPham + "'. Con lai: " + tonKhoHienTai
+								+ ", yeu cau: " + soLuongYeuCau);
+			}
+
+			vatPham.setSoLuong((short) (tonKhoHienTai - soLuongYeuCau));
+		}
+
+		vatPhamRepository.saveAll(vatPhamCanKhoa);
+	}
+
+	private void congLaiTonKhoVatPhamChoPhieu(Long phieuId) {
+		Map<Long, Integer> soLuongYeuCauTheoVatPham = tongHopSoLuongVatPhamTheoPhieu(phieuId);
+		List<VatPhamEntity> vatPhamCanKhoa = vatPhamRepository.findAllByIdInForUpdate(soLuongYeuCauTheoVatPham.keySet());
+		Map<Long, VatPhamEntity> vatPhamById = vatPhamCanKhoa.stream()
+				.collect(Collectors.toMap(VatPhamEntity::getId, item -> item));
+
+		for (Map.Entry<Long, Integer> entry : soLuongYeuCauTheoVatPham.entrySet()) {
+			Long vatPhamId = entry.getKey();
+			VatPhamEntity vatPham = vatPhamById.get(vatPhamId);
+			if (vatPham == null) {
+				throw new EntityNotFoundException("VatPham not found with id=" + vatPhamId);
+			}
+
+			int tonKhoHienTai = vatPham.getSoLuong() == null ? 0 : vatPham.getSoLuong();
+			if (tonKhoHienTai < 0) {
+				throw new InvalidFieldException("So luong ton kho khong hop le cho vat pham id=" + vatPhamId);
+			}
+
+			int soLuongYeuCau = entry.getValue();
+			int tonKhoMoi = tonKhoHienTai + soLuongYeuCau;
+			if (tonKhoMoi > Short.MAX_VALUE) {
+				throw new InvalidFieldException("So luong ton kho vuot qua gioi han cho vat pham id=" + vatPhamId);
+			}
+			vatPham.setSoLuong((short) tonKhoMoi);
+		}
+
+		vatPhamRepository.saveAll(vatPhamCanKhoa);
+	}
+
+	private Map<Long, Integer> tongHopSoLuongVatPhamTheoPhieu(Long phieuId) {
+		List<ChiTietCuuTroEntity> chiTietList = chiTietCuuTroRepository.findByPhieuCuuTro_IdOrderByIdAsc(phieuId);
+		if (chiTietList == null || chiTietList.isEmpty()) {
+			throw new InvalidFieldException("Phieu khong co chi tiet cuu tro de cap nhat ton kho");
+		}
+
+		Map<Long, Integer> soLuongYeuCauTheoVatPham = new LinkedHashMap<>();
+		for (ChiTietCuuTroEntity chiTiet : chiTietList) {
+			VatPhamEntity vatPham = chiTiet.getVatPham();
+			if (vatPham == null || vatPham.getId() == null) {
+				throw new InvalidFieldException("Chi tiet cuu tro co vat pham khong hop le");
+			}
+			Integer soLuongYeuCau = chiTiet.getSoLuong();
+			if (soLuongYeuCau == null || soLuongYeuCau <= 0) {
+				throw new InvalidFieldException("So luong vat pham yeu cau phai lon hon 0");
+			}
+			soLuongYeuCauTheoVatPham.merge(vatPham.getId(), soLuongYeuCau, Integer::sum);
+		}
+		return soLuongYeuCauTheoVatPham;
+	}
+
+	private boolean daTruTonKhoVatPham(TrangThaiPhieuHoTro trangThaiHienTai) {
+		return trangThaiHienTai == TrangThaiPhieuHoTro.DA_NHAN
+				|| trangThaiHienTai == TrangThaiPhieuHoTro.DANG_TREN_DUONG_TOI
+				|| trangThaiHienTai == TrangThaiPhieuHoTro.DANG_XU_LY;
 	}
 
 	private List<TaoPhieuHoTroTepTinRequest> resolveTepTinRequests(TaoPhieuHoTroRequest request) {

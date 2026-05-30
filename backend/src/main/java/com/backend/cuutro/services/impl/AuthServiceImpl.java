@@ -4,6 +4,7 @@ import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.util.Date;
 import java.util.List;
+import java.util.Locale;
 
 import javax.crypto.SecretKey;
 
@@ -17,8 +18,14 @@ import org.springframework.util.StringUtils;
 
 import com.backend.cuutro.constant.enums.RoleType;
 import com.backend.cuutro.dto.request.DangNhapRequest;
+import com.backend.cuutro.dto.request.DangKyRequest;
+import com.backend.cuutro.dto.request.QuenMatKhauRequest;
 import com.backend.cuutro.dto.response.entities.DangNhapResponse;
+import com.backend.cuutro.dto.response.entities.DangKyResponse;
+import com.backend.cuutro.entities.NguoiDungEntity;
 import com.backend.cuutro.entities.TaiKhoanEntity;
+import com.backend.cuutro.exception.customize.InvalidFieldException;
+import com.backend.cuutro.repository.NguoiDungRepository;
 import com.backend.cuutro.repository.TaiKhoanRepository;
 import com.backend.cuutro.services.AuthService;
 
@@ -36,6 +43,7 @@ public class AuthServiceImpl implements AuthService {
 	private static final long ACCESS_TOKEN_EXPIRES_SECONDS = 24 * 60 * 60;
 
 	private final TaiKhoanRepository taiKhoanRepository;
+	private final NguoiDungRepository nguoiDungRepository;
 	private final PasswordEncoder passwordEncoder;
 
 	@Value("${constant.key.signer-key:}")
@@ -71,6 +79,69 @@ public class AuthServiceImpl implements AuthService {
 				.build();
 	}
 
+	@Override
+	@Transactional
+	public DangKyResponse dangKy(DangKyRequest request) {
+		String ten = normalizeRequired(request.getTen(), "ten is required");
+		String tenDangNhap = normalizeRequired(request.getTenDangNhap(), "tenDangNhap is required");
+		String email = normalizeRequired(request.getEmail(), "email is required")
+				.toLowerCase(Locale.ROOT);
+		String matKhau = normalizeRequired(request.getMatKhau(), "matKhau is required");
+
+		if (matKhau.length() < 6) {
+			throw new InvalidFieldException("matKhau must be at least 6 characters");
+		}
+
+		taiKhoanRepository.findByTenDangNhapIgnoreCase(tenDangNhap)
+				.ifPresent(existing -> {
+					throw new InvalidFieldException("Ten dang nhap da ton tai");
+				});
+		taiKhoanRepository.findByEmailIgnoreCase(email)
+				.ifPresent(existing -> {
+					throw new InvalidFieldException("Email da duoc su dung");
+				});
+
+		TaiKhoanEntity taiKhoanMoi = taiKhoanRepository.save(
+				TaiKhoanEntity.builder()
+						.tenDangNhap(tenDangNhap)
+						.email(email)
+						.matKhau(passwordEncoder.encode(matKhau))
+						.trangThai(true)
+						.vaiTro(RoleType.NGUOI_DAN)
+						.build());
+
+		nguoiDungRepository.save(
+				NguoiDungEntity.builder()
+						.taiKhoan(taiKhoanMoi)
+						.ten(ten)
+						.build());
+
+		return DangKyResponse.builder()
+				.taiKhoanId(taiKhoanMoi.getId())
+				.tenDangNhap(taiKhoanMoi.getTenDangNhap())
+				.email(taiKhoanMoi.getEmail())
+				.vaiTro(taiKhoanMoi.getVaiTro())
+				.build();
+	}
+
+	@Override
+	@Transactional
+	public void quenMatKhau(QuenMatKhauRequest request) {
+		String email = normalizeRequired(request.getEmail(), "email is required")
+				.toLowerCase(Locale.ROOT);
+		String matKhauMoi = normalizeRequired(request.getMatKhauMoi(), "matKhauMoi is required");
+
+		if (matKhauMoi.length() < 6) {
+			throw new InvalidFieldException("matKhauMoi must be at least 6 characters");
+		}
+
+		TaiKhoanEntity taiKhoan = taiKhoanRepository.findByEmailIgnoreCase(email)
+				.orElseThrow(() -> new InvalidFieldException("Khong tim thay tai khoan voi email nay"));
+
+		taiKhoan.setMatKhau(passwordEncoder.encode(matKhauMoi));
+		taiKhoanRepository.save(taiKhoan);
+	}
+
 	private String taoJwtToken(TaiKhoanEntity taiKhoan, RoleType vaiTro, Instant issuedAt, Instant expiresAt) {
 		if (!StringUtils.hasText(signerKey)) {
 			throw new IllegalStateException("Property constant.key.signer-key is not configured");
@@ -100,5 +171,12 @@ public class AuthServiceImpl implements AuthService {
 			// Backward compatibility for plain-text passwords in old data.
 		}
 		return rawPassword.equals(storedPassword);
+	}
+
+	private String normalizeRequired(String value, String message) {
+		if (!StringUtils.hasText(value)) {
+			throw new InvalidFieldException(message);
+		}
+		return value.trim();
 	}
 }

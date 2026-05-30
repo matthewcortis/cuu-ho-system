@@ -2,6 +2,7 @@ package com.example.cuutro.features.sos.model;
 
 import androidx.annotation.DrawableRes;
 import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 
 public class EmergencyReportItem {
 
@@ -9,6 +10,8 @@ public class EmergencyReportItem {
     private final String location;
     private final String title;
     private final String description;
+    @Nullable
+    private final String iconUrl;
     private final int iconResId;
     private final boolean completed;
     private final String status;
@@ -21,7 +24,7 @@ public class EmergencyReportItem {
             @NonNull String description,
             @DrawableRes int iconResId
     ) {
-        this(id, location, title, description, iconResId, false, null, null);
+        this(id, location, title, description, null, iconResId, false, null, null);
     }
 
     public EmergencyReportItem(
@@ -32,7 +35,7 @@ public class EmergencyReportItem {
             @DrawableRes int iconResId,
             boolean completed
     ) {
-        this(id, location, title, description, iconResId, completed, null, null);
+        this(id, location, title, description, null, iconResId, completed, null, null);
     }
 
     public EmergencyReportItem(
@@ -44,7 +47,7 @@ public class EmergencyReportItem {
             boolean completed,
             String status
     ) {
-        this(id, location, title, description, iconResId, completed, status, null);
+        this(id, location, title, description, null, iconResId, completed, status, null);
     }
 
     public EmergencyReportItem(
@@ -52,6 +55,20 @@ public class EmergencyReportItem {
             @NonNull String location,
             @NonNull String title,
             @NonNull String description,
+            @Nullable String iconUrl,
+            @DrawableRes int iconResId,
+            boolean completed,
+            String status
+    ) {
+        this(id, location, title, description, iconUrl, iconResId, completed, status, null);
+    }
+
+    public EmergencyReportItem(
+            @NonNull String id,
+            @NonNull String location,
+            @NonNull String title,
+            @NonNull String description,
+            @Nullable String iconUrl,
             @DrawableRes int iconResId,
             boolean completed,
             String status,
@@ -61,6 +78,7 @@ public class EmergencyReportItem {
         this.location = location;
         this.title = title;
         this.description = description;
+        this.iconUrl = iconUrl;
         this.iconResId = iconResId;
         this.completed = completed;
         this.status = status;
@@ -85,6 +103,11 @@ public class EmergencyReportItem {
     @NonNull
     public String getDescription() {
         return description;
+    }
+
+    @Nullable
+    public String getIconUrl() {
+        return iconUrl;
     }
 
     @DrawableRes

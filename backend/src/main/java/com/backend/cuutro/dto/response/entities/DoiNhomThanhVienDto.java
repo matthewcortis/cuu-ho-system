@@ -23,5 +23,6 @@ public class DoiNhomThanhVienDto implements Serializable {
 	String ten;
 	String sdt;
 	String avatarUrl;
+	ViTriDto viTri;
 	String vaiTro;
 }

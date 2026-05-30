@@ -8,8 +8,11 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.backend.cuutro.dto.request.DangNhapRequest;
+import com.backend.cuutro.dto.request.DangKyRequest;
+import com.backend.cuutro.dto.request.QuenMatKhauRequest;
 import com.backend.cuutro.dto.response.ResponseData;
 import com.backend.cuutro.dto.response.entities.DangNhapResponse;
+import com.backend.cuutro.dto.response.entities.DangKyResponse;
 import com.backend.cuutro.services.AuthService;
 
 import jakarta.servlet.http.HttpServletRequest;
@@ -31,6 +34,23 @@ public class AuthController {
 		return ResponseEntity.ok(buildResponse(HttpStatus.OK, "Dang nhap thanh cong", data, httpRequest));
 	}
 
+	@PostMapping("/register")
+	public ResponseEntity<ResponseData<DangKyResponse>> dangKy(
+			@Valid @RequestBody DangKyRequest request,
+			HttpServletRequest httpRequest) {
+		DangKyResponse data = authService.dangKy(request);
+		return ResponseEntity.status(HttpStatus.CREATED)
+				.body(buildResponse(HttpStatus.CREATED, "Dang ky thanh cong", data, httpRequest));
+	}
+
+	@PostMapping("/forgot-password")
+	public ResponseEntity<ResponseData<Void>> quenMatKhau(
+			@Valid @RequestBody QuenMatKhauRequest request,
+			HttpServletRequest httpRequest) {
+		authService.quenMatKhau(request);
+		return ResponseEntity.ok(buildResponse(HttpStatus.OK, "Dat lai mat khau thanh cong", null, httpRequest));
+	}
+
 	private <T> ResponseData<T> buildResponse(HttpStatus status, String message, T data, HttpServletRequest request) {
 		return ResponseData.<T>builder()
 				.status(status.value())
@@ -41,4 +61,3 @@ public class AuthController {
 				.build();
 	}
 }
-

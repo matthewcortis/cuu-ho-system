@@ -4,6 +4,7 @@ import com.example.cuutro.core.network.ApiEnvelope;
 import com.example.cuutro.features.profile.data.remote.dto.NguoiDungDoiMatKhauRequestDto;
 import com.example.cuutro.features.profile.data.remote.dto.NguoiDungResponseDto;
 import com.example.cuutro.features.profile.data.remote.dto.NguoiDungUpsertRequestDto;
+import com.example.cuutro.features.profile.data.remote.dto.TinhNguyenVienDangKyRequestDto;
 
 import okhttp3.MultipartBody;
 import retrofit2.Call;
@@ -34,4 +35,7 @@ public interface ProfileApiService {
     Call<ApiEnvelope<NguoiDungResponseDto>> uploadCurrentNguoiDungAvatar(
             @Part MultipartBody.Part avatar
     );
+
+    @POST("tinh-nguyen-vien/dang-ky")
+    Call<ApiEnvelope<Object>> dangKyTinhNguyenVien(@Body TinhNguyenVienDangKyRequestDto request);
 }

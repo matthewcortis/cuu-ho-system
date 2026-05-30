@@ -115,12 +115,23 @@
                     app:tint="@color/report_text_primary" />
 
                 <TextView
+                    android:id="@+id/tvCommunityUploadHint"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="10dp"
                     android:text="@string/community_add_post_upload_label"
                     android:textColor="@color/report_location_text"
                     android:textSize="16sp" />
+
+                <TextView
+                    android:id="@+id/tvCommunityPostSelectedMedia"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="6dp"
+                    android:textColor="@color/report_hint"
+                    android:textSize="13sp"
+                    android:visibility="gone"
+                    tools:text="Đã chọn: image.jpg" />
             </LinearLayout>
 
             <TextView
@@ -143,7 +154,7 @@
                 android:inputType="textCapSentences"
                 android:paddingStart="16dp"
                 android:paddingEnd="16dp"
-                android:text="@string/community_add_post_title_value"
+                android:hint="@string/community_add_post_title_hint"
                 android:textColor="@color/report_text_primary"
                 android:textColorHint="@color/report_hint"
                 android:textSize="16sp" />
@@ -171,7 +182,7 @@
                 android:paddingTop="14dp"
                 android:paddingEnd="16dp"
                 android:paddingBottom="14dp"
-                android:text="@string/community_add_post_description_value"
+                android:hint="@string/community_add_post_description_hint"
                 android:textColor="@color/report_location_text"
                 android:textColorHint="@color/report_hint"
                 android:textSize="16sp" />
@@ -209,7 +220,7 @@
                     android:layout_height="wrap_content"
                     android:layout_marginStart="10dp"
                     android:layout_weight="1"
-                    android:text="@string/community_add_post_location_value"
+                    android:text="@string/community_add_post_location_placeholder"
                     android:textColor="@color/report_location_text"
                     android:textSize="16sp" />
 

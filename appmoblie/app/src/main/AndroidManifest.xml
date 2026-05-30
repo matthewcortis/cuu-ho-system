@@ -29,7 +29,16 @@
             android:name=".features.splash.ui.NotificationScreenActivity"
             android:exported="false" />
         <activity
+            android:name=".features.splash.ui.TermsActivity"
+            android:exported="false" />
+        <activity
             android:name=".features.setting.ui.SettingActivity"
+            android:exported="false" />
+        <activity
+            android:name=".features.auth.ui.RegisterActivity"
+            android:exported="false" />
+        <activity
+            android:name=".features.auth.ui.ForgotPasswordActivity"
             android:exported="false" />
         <activity
             android:name=".features.auth.ui.LoginActivity"

@@ -33,6 +33,9 @@ public class PhieuCuuTroSummaryDto {
     @SerializedName("createdAt")
     private String createdAt;
 
+    @SerializedName("phanCong")
+    private PhanCongDto phanCong;
+
     public Long getId() {
         return id;
     }
@@ -67,6 +70,10 @@ public class PhieuCuuTroSummaryDto {
 
     public String getCreatedAt() {
         return createdAt;
+    }
+
+    public PhanCongDto getPhanCong() {
+        return phanCong;
     }
 
     public static class LoaiSuCoDto {
@@ -138,6 +145,60 @@ public class PhieuCuuTroSummaryDto {
 
         public String getSdt() {
             return sdt;
+        }
+    }
+
+    public static class PhanCongDto {
+
+        @SerializedName("doiNhom")
+        private DoiNhomDto doiNhom;
+
+        public DoiNhomDto getDoiNhom() {
+            return doiNhom;
+        }
+    }
+
+    public static class DoiNhomDto {
+
+        @SerializedName("viTri")
+        private ViTriDto viTri;
+
+        @SerializedName("doiTruong")
+        private DoiTruongDto doiTruong;
+
+        public ViTriDto getViTri() {
+            return viTri;
+        }
+
+        public DoiTruongDto getDoiTruong() {
+            return doiTruong;
+        }
+    }
+
+    public static class DoiTruongDto {
+
+        @SerializedName("viTri")
+        private ViTriDto viTri;
+
+        @SerializedName("nguoiDung")
+        private DoiTruongNguoiDungDto nguoiDung;
+
+        public ViTriDto getViTri() {
+            return viTri;
+        }
+
+        public DoiTruongNguoiDungDto getNguoiDung() {
+            return nguoiDung;
+        }
+    }
+
+    public static class DoiTruongNguoiDungDto {
+
+        @SerializedName("viTri")
+        private ViTriDto viTri;
+
+        public ViTriDto getViTri() {
+            return viTri;
         }
     }
 

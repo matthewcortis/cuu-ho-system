@@ -1,5 +1,6 @@
 package com.example.cuutro.features.sos.ui;
 
+import android.content.res.ColorStateList;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -14,9 +15,11 @@ import android.widget.TextView;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.core.content.ContextCompat;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.example.cuutro.R;
+import com.example.cuutro.features.report.ui.controller.ReportBitmapLoader;
 import com.example.cuutro.features.sos.model.EmergencyReportItem;
 
 import java.util.ArrayList;
@@ -54,6 +57,7 @@ public class EmergencyReportAdapter extends RecyclerView.Adapter<EmergencyReport
     private boolean showDeleteAction = true;
     private boolean showTaskActions = false;
     private boolean showTaskStatusUpdater = false;
+    private final ReportBitmapLoader bitmapLoader = new ReportBitmapLoader();
 
     public EmergencyReportAdapter() {
         this(null);
@@ -89,6 +93,10 @@ public class EmergencyReportAdapter extends RecyclerView.Adapter<EmergencyReport
         this.statusUpdateListener = statusUpdateListener;
     }
 
+    public void release() {
+        bitmapLoader.shutdown();
+    }
+
     @NonNull
     @Override
     public EmergencyReportViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
@@ -100,7 +108,7 @@ public class EmergencyReportAdapter extends RecyclerView.Adapter<EmergencyReport
     @Override
     public void onBindViewHolder(@NonNull EmergencyReportViewHolder holder, int position) {
         EmergencyReportItem item = items.get(position);
-        holder.bind(item, showDeleteAction, showTaskActions, showTaskStatusUpdater);
+        holder.bind(item, showDeleteAction, showTaskActions, showTaskStatusUpdater, bitmapLoader);
         holder.bindStatusUpdater(
                 item,
                 selectedStatusByReportId.get(item.getId()),
@@ -202,12 +210,13 @@ public class EmergencyReportAdapter extends RecyclerView.Adapter<EmergencyReport
                 @NonNull EmergencyReportItem item,
                 boolean canDelete,
                 boolean canShowTaskActions,
-                boolean canShowTaskStatusUpdater
+                boolean canShowTaskStatusUpdater,
+                @NonNull ReportBitmapLoader bitmapLoader
         ) {
             locationTextView.setText(item.getLocation());
             titleTextView.setText(item.getTitle());
             descriptionTextView.setText(item.getDescription());
-            iconImageView.setImageResource(item.getIconResId());
+            bindIncidentIcon(item, bitmapLoader);
             deleteButton.setVisibility(canDelete ? View.VISIBLE : View.GONE);
 
             String statusLabel = item.getStatusLabel();
@@ -229,6 +238,56 @@ public class EmergencyReportAdapter extends RecyclerView.Adapter<EmergencyReport
             taskStatusUpdateLayout.setVisibility(
                     canShowTaskStatusUpdater && !isChoDieuPhoi ? View.VISIBLE : View.GONE
             );
+        }
+
+        private void bindIncidentIcon(
+                @NonNull EmergencyReportItem item,
+                @NonNull ReportBitmapLoader bitmapLoader
+        ) {
+            String targetUrl = bitmapLoader.normalizeUrl(item.getIconUrl());
+            if (targetUrl == null || !bitmapLoader.isHttpUrl(targetUrl)) {
+                setLocalFallbackIcon(item.getIconResId(), false);
+                return;
+            }
+
+            iconImageView.setTag(targetUrl);
+            setLocalFallbackIcon(item.getIconResId(), true);
+            bitmapLoader.load(targetUrl, (loadedUrl, bitmap) -> {
+                Object boundTag = iconImageView.getTag();
+                if (!(boundTag instanceof String)) {
+                    return;
+                }
+                String expectedUrl = (String) boundTag;
+                if (loadedUrl == null || !expectedUrl.equals(loadedUrl)) {
+                    return;
+                }
+                if (bitmap == null) {
+                    setLocalFallbackIcon(item.getIconResId(), true);
+                    return;
+                }
+                iconImageView.setImageBitmap(bitmap);
+                iconImageView.setImageTintList(null);
+                iconImageView.setScaleType(ImageView.ScaleType.FIT_CENTER);
+                int loadedPadding = dpToPx(2);
+                iconImageView.setPadding(loadedPadding, loadedPadding, loadedPadding, loadedPadding);
+            });
+        }
+
+        private void setLocalFallbackIcon(int iconResId, boolean preserveTag) {
+            if (!preserveTag) {
+                iconImageView.setTag(null);
+            }
+            iconImageView.setImageResource(iconResId);
+            iconImageView.setImageTintList(
+                    ColorStateList.valueOf(ContextCompat.getColor(itemView.getContext(), R.color.white))
+            );
+            iconImageView.setScaleType(ImageView.ScaleType.CENTER_INSIDE);
+            int padding = dpToPx(14);
+            iconImageView.setPadding(padding, padding, padding, padding);
+        }
+
+        private int dpToPx(int dp) {
+            return Math.round(dp * itemView.getResources().getDisplayMetrics().density);
         }
 
         void bindStatusUpdater(

@@ -88,29 +88,29 @@ export default function SignInForm() {
         <div>
           <div className="mb-5 sm:mb-8">
             <h1 className="mb-2 font-semibold text-gray-800 text-title-sm dark:text-white/90 sm:text-title-md">
-              Dang nhap
+              Đăng nhập
             </h1>
             <p className="text-sm text-gray-500 dark:text-gray-400">
-              Nhap ten dang nhap va mat khau de dang nhap.
-            </p>
+                Nhập thông tin đăng nhập của bạn để truy cập vào trang quản trị.
+              </p>
           </div>
           <div>
             <form onSubmit={handleSubmit}>
               <div className="space-y-6">
                 <div>
                   <Label>
-                    Ten dang nhap <span className="text-error-500">*</span>
+                    Tên Đăng Nhập <span className="text-error-500">*</span>
                   </Label>
                   <Input
                     name="tenDangNhap"
-                    placeholder="Nhap ten dang nhap"
+                    placeholder="Nhập tên đăng nhập"
                     value={tenDangNhap}
                     onChange={(event) => setTenDangNhap(event.target.value)}
                   />
                 </div>
                 <div>
                   <Label>
-                    Mat khau <span className="text-error-500">*</span>
+                    Mật khẩu <span className="text-error-500">*</span>
                   </Label>
                   <div className="relative">
                     <Input
@@ -137,39 +137,29 @@ export default function SignInForm() {
                   <p className="text-sm text-error-500">{errorMessage}</p>
                 ) : null}
 
-                <div className="flex items-center justify-between">
+                {/* <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
                     <Checkbox checked={isRemembered} onChange={setIsRemembered} />
                     <span className="block font-normal text-gray-700 text-theme-sm dark:text-gray-400">
-                      Ghi nho dang nhap
+                      Ghi nhớ đăng nhập
                     </span>
                   </div>
                   <Link
                     to="/reset-password"
                     className="text-sm text-brand-500 hover:text-brand-600 dark:text-brand-400"
                   >
-                    Quen mat khau?
+                    Quên mật khẩu?
                   </Link>
-                </div>
+                </div> */}
                 <div>
                   <Button className="w-full" size="sm" disabled={isSubmitting}>
-                    {isSubmitting ? "Dang dang nhap..." : "Dang nhap"}
+                    {isSubmitting ? "Đang đăng nhập..." : "Đăng nhập"}
                   </Button>
                 </div>
               </div>
             </form>
 
-            <div className="mt-5">
-              <p className="text-sm font-normal text-center text-gray-700 dark:text-gray-400 sm:text-start">
-                Chua co tai khoan?{" "}
-                <Link
-                  to="/signup"
-                  className="text-brand-500 hover:text-brand-600 dark:text-brand-400"
-                >
-                  Dang ky
-                </Link>
-              </p>
-            </div>
+          
           </div>
         </div>
       </div>

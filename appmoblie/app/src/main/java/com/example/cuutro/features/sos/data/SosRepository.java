@@ -188,6 +188,7 @@ public class SosRepository {
             String status = trimToNull(response.getTrangThai());
             boolean isCompleted = isCompletedStatus(status);
             String statusLabel = resolveStatusLabel(status);
+            String iconUrl = resolveIncidentIconUrl(response.getLoaiSuCo());
             int iconResId = resolveIcon(title);
 
             reports.add(new EmergencyReportItem(
@@ -195,6 +196,7 @@ public class SosRepository {
                     location,
                     title,
                     description,
+                    iconUrl,
                     iconResId,
                     isCompleted,
                     status,
@@ -225,11 +227,27 @@ public class SosRepository {
             String reportId = response.getId() == null
                     ? "local_" + nodes.size()
                     : String.valueOf(response.getId());
+            Double captainLatitude = null;
+            Double captainLongitude = null;
+            PhieuCuuTroSummaryDto.ViTriDto captainViTri = resolveCaptainViTri(response);
+            if (captainViTri != null) {
+                Double parsedCaptainLatitude = parseCoordinate(captainViTri.getLat());
+                Double parsedCaptainLongitude = parseCoordinate(captainViTri.getLongitude());
+                if (parsedCaptainLatitude != null
+                        && parsedCaptainLongitude != null
+                        && isValidLatitude(parsedCaptainLatitude)
+                        && isValidLongitude(parsedCaptainLongitude)) {
+                    captainLatitude = parsedCaptainLatitude;
+                    captainLongitude = parsedCaptainLongitude;
+                }
+            }
             nodes.add(new EmergencyReportMapNode(
                     reportId,
                     latitude,
                     longitude,
-                    trimToNull(response.getTrangThai())
+                    trimToNull(response.getTrangThai()),
+                    captainLatitude,
+                    captainLongitude
             ));
         }
         return nodes;
@@ -293,6 +311,26 @@ public class SosRepository {
             return DEFAULT_LOCATION;
         }
         return fallbackIfBlank(viTri.getDiaChi(), DEFAULT_LOCATION);
+    }
+
+    @Nullable
+    private PhieuCuuTroSummaryDto.ViTriDto resolveCaptainViTri(@NonNull PhieuCuuTroSummaryDto response) {
+        PhieuCuuTroSummaryDto.PhanCongDto phanCong = response.getPhanCong();
+        if (phanCong == null || phanCong.getDoiNhom() == null) {
+            return null;
+        }
+
+        PhieuCuuTroSummaryDto.DoiNhomDto doiNhom = phanCong.getDoiNhom();
+        PhieuCuuTroSummaryDto.DoiTruongDto doiTruong = doiNhom.getDoiTruong();
+        if (doiTruong != null) {
+            if (doiTruong.getViTri() != null) {
+                return doiTruong.getViTri();
+            }
+            if (doiTruong.getNguoiDung() != null && doiTruong.getNguoiDung().getViTri() != null) {
+                return doiTruong.getNguoiDung().getViTri();
+            }
+        }
+        return doiNhom.getViTri();
     }
 
     @Nullable

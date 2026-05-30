@@ -87,7 +87,7 @@ const navItems: NavItem[] = [
     icon: <PageIcon />,
     subItems: [
       { name: "Thêm bảng tin", path: "/them-bang-tin", pro: false },
-      { name: "Quảng lý bảng tin", path: "/quan-ly-bang-tin", pro: false }
+      { name: "Quản lý bảng tin", path: "/quan-ly-bang-tin", pro: false }
     ],
   },
    {
@@ -419,4 +419,3 @@ const AppSidebar: React.FC = () => {
 };
 
 export default AppSidebar;
-

@@ -3,6 +3,8 @@ package com.backend.cuutro.dto.response.entities;
 import java.io.Serializable;
 import java.time.Instant;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
+
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -22,6 +24,7 @@ import lombok.experimental.FieldDefaults;
 @FieldDefaults(level = AccessLevel.PRIVATE)
 @Builder
 @EqualsAndHashCode(of = {"id"})
+@JsonInclude(JsonInclude.Include.NON_NULL)
 public class TinNhanDto implements Serializable {
 	Long id;
 	PhieuCuuTroDto phieuCuuTro;

@@ -33,6 +33,22 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@id/tvCommunityTitle" />
 
+    <TextView
+        android:id="@+id/tvCommunityEmpty"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="22dp"
+        android:layout_marginEnd="22dp"
+        android:gravity="center"
+        android:text="@string/community_loading_posts"
+        android:textColor="@color/report_hint"
+        android:textSize="15sp"
+        android:visibility="gone"
+        app:layout_constraintBottom_toBottomOf="@id/rvCommunityPosts"
+        app:layout_constraintEnd_toEndOf="@id/rvCommunityPosts"
+        app:layout_constraintStart_toStartOf="@id/rvCommunityPosts"
+        app:layout_constraintTop_toTopOf="@id/rvCommunityPosts" />
+
     <com.google.android.material.floatingactionbutton.FloatingActionButton
         android:id="@+id/fabCreateCommunityPost"
         android:layout_width="wrap_content"

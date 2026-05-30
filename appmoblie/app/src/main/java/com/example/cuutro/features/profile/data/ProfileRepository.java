@@ -17,6 +17,7 @@ import com.example.cuutro.features.profile.data.remote.ProfileApiService;
 import com.example.cuutro.features.profile.data.remote.dto.NguoiDungDoiMatKhauRequestDto;
 import com.example.cuutro.features.profile.data.remote.dto.NguoiDungResponseDto;
 import com.example.cuutro.features.profile.data.remote.dto.NguoiDungUpsertRequestDto;
+import com.example.cuutro.features.profile.data.remote.dto.TinhNguyenVienDangKyRequestDto;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -203,6 +204,59 @@ public class ProfileRepository {
                 callback.onError(error);
             }
         });
+    }
+
+    public void registerCurrentUserAsVolunteer(
+            @NonNull UserProfileData profile,
+            @NonNull ResultCallback<Void> callback
+    ) {
+        registerCurrentUserAsVolunteer(profile, null, null, callback);
+    }
+
+    public void registerCurrentUserAsVolunteer(
+            @NonNull UserProfileData profile,
+            @Nullable String coTheGiup,
+            @Nullable String ghiChu,
+            @NonNull ResultCallback<Void> callback
+    ) {
+        if (!authRepository.hasActiveSession()) {
+            callback.onError(new NetworkError(401, "Phiên đăng nhập đã hết hạn"));
+            return;
+        }
+        if (authRepository.isCurrentRoleCaptain()) {
+            callback.onError(new NetworkError(400, "Tài khoản hiện đã là tình nguyện viên"));
+            return;
+        }
+
+        String nguoiDungId = trimToNull(profile.getNguoiDungId());
+        if (nguoiDungId == null) {
+            callback.onError(new NetworkError(
+                    400,
+                    "Không tìm thấy hồ sơ người dùng để đăng ký tình nguyện viên"
+            ));
+            return;
+        }
+
+        TinhNguyenVienDangKyRequestDto requestDto = new TinhNguyenVienDangKyRequestDto(
+                nguoiDungId,
+                null,
+                trimToNull(ghiChu),
+                trimToNull(coTheGiup)
+        );
+        networkCallExecutor.execute(
+                profileApiService.dangKyTinhNguyenVien(requestDto),
+                new ResultCallback<Object>() {
+                    @Override
+                    public void onSuccess(Object data) {
+                        callback.onSuccess(null);
+                    }
+
+                    @Override
+                    public void onError(@NonNull NetworkError error) {
+                        callback.onError(error);
+                    }
+                }
+        );
     }
 
     private void clearCurrentLocalProfile() {
